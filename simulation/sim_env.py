@@ -2,8 +2,8 @@ import pybullet as p
 import time
 import numpy as np
 
-class pybullet_objects:
-  def __init__(self,obj_list,gui=True):
+class SIM_ENV:
+  def __init__(self,obj_list,pokingNet=None,segNet=None,segNet2=None,gui=True):
     self.p = p
     if gui:
       self.p.connect(self.p.GUI)
@@ -50,6 +50,7 @@ class pybullet_objects:
       time.sleep(0.01) 
       frame_id += 1.0
 
+ 
 if __name__ == "__main__":    
-  test = pybullet_objects(['./model1.obj','./model2.obj','./model3.obj'],gui=True)
+  test = interactive_segmentation_env(['./model1.obj','./model2.obj','./model3.obj'],gui=True)
   test.simulation()
