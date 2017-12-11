@@ -7,7 +7,7 @@ from local_variables import DATA_DIR
 from Train_Val_Test import *
 import numpy as np
 np.random.seed(42)
-scanning_data_top_dir = os.path.join(DATA_DIR,'BlensorResult_1frame')
+scanning_data_top_dir = os.path.join(DATA_DIR,'BlensorResult_2frame')
 total_ids = []
 
 for line in os.listdir(scanning_data_top_dir):
