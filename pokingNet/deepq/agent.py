@@ -6,14 +6,12 @@ import numpy as np
 from tqdm import tqdm
 import tensorflow as tf
 
-from .base import BaseModel
-from .replay_memory import ReplayMemory
-from .ops import linear, conv2d, clipped_error
-from .utils import get_time, save_pkl, load_pkl
+from replay_memory import ReplayMemory
+from ops import linear, conv2d, clipped_error
+from utils import get_time, save_pkl, load_pkl
 
-class Agent(BaseModel):
+class Agent():
   def __init__(self, config, environment, sess):
-    super(Agent, self).__init__(config)
     self.sess = sess
     self.weight_dir = 'weights'
 
@@ -44,13 +42,19 @@ class Agent(BaseModel):
             [None, self.screen_height, self.screen_width, self.screen_dim], name='s_t')
 
       self.l1, self.w['l1_w'], self.w['l1_b'] = conv2d(self.s_t,
-          32, [8, 8], [4, 4], initializer, activation_fn, name='l1')
+          32, [8, 8], [2, 2], initializer, activation_fn, name='l1')
       self.l2, self.w['l2_w'], self.w['l2_b'] = conv2d(self.l1,
-          64, [4, 4], [2, 2], initializer, activation_fn, name='l2')
+          64, [8, 8], [2, 2], initializer, activation_fn, name='l2')
       self.l3, self.w['l3_w'], self.w['l3_b'] = conv2d(self.l2,
-          64, [4, 4], [2, 2], initializer, activation_fn, name='l3')
+          64, [8, 8], [2, 2], initializer, activation_fn, name='l3')
       self.l4, self.w['l4_w'], self.w['l4_b'] = conv2d(self.l3,
-          64, [4, 4], [2, 2], initializer, activation_fn, name='l4')
+          128, [8, 8], [1, 1], initializer, activation_fn, name='l4')
+      self.l5, self.w['l5_w'], self.w['l5_b'] = conv2d(self.l3,
+          128, [8, 8], [1, 1], initializer, activation_fn, name='l5')
+      self.l6, self.w['l5_w'], self.w['l5_b'] = conv2d(self.l3,
+          256, [4, 4], [1, 1], initializer, activation_fn, name='l6')
+      self.l7, self.w['l5_w'], self.w['l5_b'] = conv2d(self.l3,
+          256, [3, 3], [1, 1], initializer, activation_fn, name='l7')
 
 
       shape = self.lfinal.get_shape().as_list()
