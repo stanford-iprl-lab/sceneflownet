@@ -21,15 +21,39 @@ def conv2d(x,
     kernel_shape = [kernel_size[0], kernel_size[1], x.get_shape()[-1], output_dim]
 
     w = tf.get_variable('w', kernel_shape, tf.float32, initializer=initializer)
-    conv = tf.nn.conv2d(x, w, stride, padding, data_format=data_format)
+    conv = tf.nn.conv2d(x, w, stride, padding)
 
     b = tf.get_variable('biases', [output_dim], initializer=tf.constant_initializer(0.0))
-    out = tf.nn.bias_add(conv, b, data_format)
+    out = tf.nn.bias_add(conv, b)
 
   if activation_fn != None:
     out = activation_fn(out)
 
   return out, w, b
+
+def conv2d_transpose(x,
+             output_dim,
+             kernel_size,
+             stride,
+             initializer=tf.contrib.layers.xavier_initializer(),
+             activation_fn=tf.nn.relu,
+             padding='VALID',
+             name='conv2d_transpose'):
+  with tf.variable_scope(name):
+    stride = [1, stride[0], stride[1], 1]
+    kernel_shape = [kernel_size[0], kernel_size[1], x.get_shape()[-1], output_dim] 
+
+    w = tf.get_variable('w', kernel_shape, tf.float32, initializer=initializer)
+    conv_transpose = tf.nn.conv2d_transpose(x, w, strides, padding)
+
+    b = tf.get_variable('biases', [output_dim], initializer=tf.constant_initializer(0.0))
+    out = tf.nn.bias_add(conv_transpose,b)
+   
+  if activation_fn != None:
+    out = activation_fn(out)
+ 
+  return out, w, b
+
 
 def linear(input_, output_size, stddev=0.02, bias_start=0.0, activation_fn=None, name='linear'):
   shape = input_.get_shape().as_list()
