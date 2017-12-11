@@ -9,7 +9,7 @@ import time
 import sys
 
 
-def loss(pred_xyz, pred_r, pred_mask, pred_score, gt_xyz, gt_r, global_step, batch_size, dim=3, h=120, w=160):
+def loss(pred_xyz, pred_r, pred_mask, pred_score, gt_xyz, gt_r, global_step, batch_size, dim=3, h=240, w=320):
   obj_mask_origin = tf.greater(gt_xyz[:,:,:,2],tf.zeros_like(gt_xyz[:,:,:,2]))
   obj_mask_origin = tf.cast(obj_mask_origin,tf.float32)
   obj_mask_1  = tf.reshape(obj_mask_origin,[-1,h,w,1])

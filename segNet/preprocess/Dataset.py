@@ -45,15 +45,15 @@ class Dataset(object):
     self._outs_path = []
     for id_line in xrange(self._num_examples):
       ins_sub_dir = os.path.join(self._ins_dir, self._ids[id_line])
-      ins_ = [line for line in os.listdir(ins_sub_dir) if line.endswith('.pgm')]
-      out_ = [line for line in os.listdir(ins_sub_dir) if line.endswith('.npz')]
+      ins_ = [line for line in os.listdir(ins_sub_dir) if line.endswith('.pgm') and line.startswith('frame80')]
+      out_ = [line for line in os.listdir(ins_sub_dir) if line.endswith('_labeling.npz') and line.startswith('frame80')]
       if len(ins_) > 0 and len(out_) > 0 and len(ins_) == len(out_):
         self._ins_path.append(os.path.join(ins_sub_dir,ins_[0]))
         self._outs_path.append(os.path.join(ins_sub_dir,out_[0]))
     return  self._ins_path,self._outs_path
  
   def _tfrecords(self):
-    total_path = os.path.join(DATA_DIR,'Tfrecords',self.tfrecords_filename)
+    total_path = os.path.join(DATA_DIR,'Tfrecords_SegNet',self.tfrecords_filename)
     writer =  tf.python_io.TFRecordWriter(total_path)
 
     for idx in xrange(len(self._ins_path)):
@@ -95,4 +95,4 @@ class Dataset(object):
 
 if __name__ == '__main__':
   from data_preparing import train_val_test_list 
-  train_dataset = Dataset(train_val_test_list._val, ins_dir=os.path.join(DATA_DIR,'BlensorResult_1frame'), ins_extension='.pgm',flag_rotation_aug=True,tfrecords_filename='val.tfrecords') 
+  train_dataset = Dataset(train_val_test_list._train, ins_dir=os.path.join(DATA_DIR,'BlensorResult_2frame'), ins_extension='.pgm',flag_rotation_aug=True,tfrecords_filename='train.tfrecords') 

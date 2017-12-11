@@ -8,8 +8,8 @@ from utils import *
 
 np.set_printoptions(precision=4,suppress=True,linewidth=300)
 
-h = 120
-w = 160
+h = 240
+w = 320
 
 def load_seg(filepath):
   try:
@@ -67,7 +67,7 @@ def load_xyz(filename):
             image_y = np.flipud(cam_y)
             image_x = np.flipud(cam_x)
 
-            zoom_scale = 0.25
+            zoom_scale = 0.5
             image_x = scipy.ndimage.zoom(image_x, zoom_scale, order=1)
             image_y = scipy.ndimage.zoom(image_y, zoom_scale, order=1)
             image_z = scipy.ndimage.zoom(image_z, zoom_scale, order=1)

@@ -26,9 +26,9 @@ def read_and_decode(filename_queue):
   out_xyz_raw = tf.decode_raw(features['out_xyz_raw'],tf.float32)
   out_r_raw = tf.decode_raw(features['out_r_raw'],tf.float32)
 
-  out_xyz_raw = tf.reshape(out_xyz_raw,tf.stack([120,160,3]))
-  out_r_raw = tf.reshape(out_r_raw,tf.stack([120,160,1]))
-  in_raw = tf.reshape(in_xyz_raw,[120,160,3])
+  out_xyz_raw = tf.reshape(out_xyz_raw,tf.stack([240,320,3]))
+  out_r_raw = tf.reshape(out_r_raw,tf.stack([240,320,1]))
+  in_raw = tf.reshape(in_xyz_raw,[240,320,3])
 
   instance_id_raw = tf.cast(features['instance_id'],tf.int32)
 

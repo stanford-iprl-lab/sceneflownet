@@ -60,7 +60,7 @@ class Experiment:
 
     pred_seg_flag = pred_seg > 0.5
     pred_seg_flag_float = tf.cast(pred_seg_flag,tf.float32)
-    pred_seg_flag_1 = tf.reshape(pred_seg_flag_float,[-1,120,160,1])
+    pred_seg_flag_1 = tf.reshape(pred_seg_flag_float,[-1,240,320,1])
     pred_seg_flag_dim = tf.tile(pred_seg_flag_1,[1,1,1,dim])
 
     pred_c_infer = pred_seg_flag_dim * self.pred['xyz']
