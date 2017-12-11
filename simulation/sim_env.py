@@ -3,7 +3,7 @@ import time
 import numpy as np
 
 class SIM_ENV:
-  def __init__(self,obj_list,pokingNet=None,segNet=None,segNet2=None,gui=True):
+  def __init__(self,obj_list,segNet=None,segNet2=None,gui=True):
     self.p = p
     if gui:
       self.p.connect(self.p.GUI)
