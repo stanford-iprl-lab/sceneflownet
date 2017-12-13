@@ -1,17 +1,42 @@
 import numpy as np
 import scipy.ndimage
-from pyquaternion import Quaternion
 import math
 import matplotlib.pyplot as plt
-
-from math import *
 from utils import *
+from math import *
 import os
+from mayavi import mlab as mayalab
 
 np.set_printoptions(precision=4,suppress=True,linewidth=300)
 
 h = 240
 w = 320
+
+
+def quaternion_matrix(quaternion):
+    """Return homogeneous rotation matrix from quaternion.
+    >>> M = quaternion_matrix([0.99810947, 0.06146124, 0, 0])
+    >>> numpy.allclose(M, rotation_matrix(0.123, [1, 0, 0]))
+    True
+    >>> M = quaternion_matrix([1, 0, 0, 0])
+    >>> numpy.allclose(M, numpy.identity(4))
+    True
+    >>> M = quaternion_matrix([0, 1, 0, 0])
+    >>> numpy.allclose(M, numpy.diag([1, -1, -1, 1]))
+    True
+    """
+    _EPS = np.finfo(float).eps * 4.0
+    q = np.array(quaternion, dtype=np.float64, copy=True)
+    n = np.dot(q, q)
+    if n < _EPS:
+        return np.identity(4)
+    q *= math.sqrt(2.0 / n)
+    q = np.outer(q, q)
+    return np.array([
+        [1.0-q[2, 2]-q[3, 3],     q[1, 2]-q[3, 0],     q[1, 3]+q[2, 0], 0.0],
+        [    q[1, 2]+q[3, 0], 1.0-q[1, 1]-q[3, 3],     q[2, 3]-q[1, 0], 0.0],
+        [    q[1, 3]-q[2, 0],     q[2, 3]+q[1, 0], 1.0-q[1, 1]-q[2, 2], 0.0],
+        [                0.0,                 0.0,                 0.0, 1.0]])
 
 def load_labeling(filepath):
   label_id = np.load(filepath)['labeling']
@@ -31,28 +56,87 @@ def tran_rot(filepath):
 
 
 def load_transformation(top_dir):
+  pgm_filepath = [line for line in os.listdir(top_dir) if line.endswith('.pgm') and line.startswith('frame80')][0]
+  print(pgm_filepath)
+  
+  tmp = pgm_filepath.split('.pgm')[0].split('_')
+  
+  azimuth_deg = float(tmp[2].split('azi')[1])
+  elevation_deg = float(tmp[3].split('ele')[1]) 
+  theta_deg = float(tmp[4].split('theta')[1])
+  rho = float(tmp[1].split('rho')[1])
+  
+  print('azi %f ele %f the %f rho %f' % (azimuth_deg, elevation_deg, theta_deg, rho))
+  
+  cx, cy, cz = obj_centened_camera_pos(rho, azimuth_deg, elevation_deg)
+  q1 = camPosToQuaternion(cx , cy , cz)
+  q2 = camRotQuaternion(cx, cy , cz, theta_deg)
+  q = quaternionProduct(q2, q1)
+  R = quaternion_matrix(q)[0:3,0:3]
+  C = np.zeros((3,))
+  C[0] = cx
+  C[1] = cy
+  C[2] = cz
+  
   frame2_id = load_labeling(os.path.join(top_dir,'frame80_labeling_model_id.npz')) 
   frame1_id = load_labeling(os.path.join(top_dir,'frame20_labeling_model_id.npz'))   
 
+  frame2_xyz = load_xyz(os.path.join(top_dir,'frame80_rho0.240233_azi11.000000_ele54.641796_theta0.01388500000.pgm'))
+  frame1_xyz = load_xyz(os.path.join(top_dir,'frame20_rho0.240233_azi11.000000_ele54.641796_theta0.01388500000.pgm'))
+  
   frame2_id_list = np.unique(frame2_id)
   frame1_id_list = np.unique(frame1_id)
+  
   plt.figure(0)
-  plt.imshow(frame2_id[:,:,0])
-  plt.figure(1)
   plt.imshow(frame1_id[:,:,0])
+  plt.figure(1)
+  plt.imshow(frame2_id[:,:,0])
+  plt.figure(2)
+  plt.imshow(frame1_xyz[:,:,2])
+  plt.figure(3)
+  plt.imshow(frame2_xyz[:,:,2])
   plt.show()
 
   model_ids = [line.split('80_')[1] for line in os.listdir(top_dir) if line.endswith('.txt') and line.startswith('frame80')]
   model_ids.sort()
+  print(frame2_id_list)
+  print(frame1_id_list)
 
   for instance_id in frame2_id_list:
+
     if instance_id in frame1_id_list and instance_id > 0:
+      #print(instance_id)
+      #print(model_ids[int(instance_id)-1])
       frame2_tran, frame2_rot = tran_rot(os.path.join(top_dir,'frame80_'+model_ids[int(instance_id)-1]))             
       frame1_tran, frame1_rot = tran_rot(os.path.join(top_dir,'frame20_'+model_ids[int(instance_id)-1]))
-      tran = -frame2_tran + frame1_tran
-      rot = frame1_rot.dot(np.linalg.inv(frame2_rot))
-      print(tran)
-      print(rot)
+      R12 = frame1_rot.dot(np.linalg.inv(frame2_rot))
+      rot = R.T.dot(R12.dot(R))
+      tran = R.T.dot(frame1_tran-C) + R.T.dot(R12.dot(C-frame2_tran))
+      
+      tran[2] *= -1.0
+      rot[0,2] *= -1.0 
+      rot[1,2] *= -1.0
+      rot[2,0] *= -1.0
+      rot[2,1] *= -1.0
+      #print(np.linalg.det(frame1_rot))
+      #print(np.linalg.det(rot))
+      #print(np.linalg.det(R))
+      #print(np.linalg.det(R1R2T))
+      #print(np.linalg.det(frame1_rot))
+      
+      
+      if int(instance_id) == 16:
+        frame2_pid = frame2_id == instance_id
+        frame2_pid = frame2_pid.reshape((240,320))
+        frame2_pid_xyz = frame2_xyz[frame2_pid]
+        frame1_pid = frame1_id == instance_id
+        frame1_pid = frame1_pid.reshape((240,320))
+        frame1_pid_xyz = frame1_xyz[frame1_pid]
+        frame21_xyz = rot.dot(frame2_pid_xyz.T).T + tran
+        mayalab.points3d(frame21_xyz[:,0],frame21_xyz[:,1],frame21_xyz[:,2])
+        mayalab.points3d(frame1_pid_xyz[:,0],frame1_pid_xyz[:,1],frame1_pid_xyz[:,2],color=(1,0,0))
+      
+        
     if instance_id not in frame1_id_list and instance_id > 0:
       tran = np.zeros((3,))
       rot = np.identity(3)
@@ -123,4 +207,4 @@ def load_xyz(filename):
     return np.zeros((h,w,3))
 
 if __name__ == '__main__':
-  load_transformation('/home/lins/interactive-segmentation/Data/BlensorResult_2frame/300') 
+  load_transformation('/Users/lins/interactive-segmentation/segNet2/preprocess/300') 
