@@ -53,6 +53,10 @@ def load_transformation(top_dir):
       rot = frame1_rot.dot(np.linalg.inv(frame2_rot))
       print(tran)
       print(rot)
+    if instance_id not in frame1_id_list and instance_id > 0:
+      tran = np.zeros((3,))
+      rot = np.identity(3)
+ 
 
 def load_seg(filepath):
   try:
