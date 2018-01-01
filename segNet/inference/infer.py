@@ -8,17 +8,17 @@ import os
 import time
 import sys
 
-def nms(pred_c,pred_r,pred_s):
+def nms(pred_feat,pred_r,pred_s,dim):
   """
   dets = [x,r,s]
   """
-  c = np.reshape(pred_c,(-1,3)) 
+  feat = np.reshape(pred_feat,(-1,dim)) 
   r = np.reshape(pred_r,(-1,))
   scores = np.reshape(pred_s,(-1,))
 
   index = np.where(scores > 0.45)[0]
     
-  c = c[index]
+  feat = feat[index]
   r = r[index]
   scores = scores[index] 
   
@@ -26,8 +26,8 @@ def nms(pred_c,pred_r,pred_s):
   keep = []
   while order.size > 0:
     i = order[0]
-    tmp = c[order[1:],:] - c[i,:]
-    inds = np.where(np.linalg.norm(c[order,:] - c[i,:],axis=1) > max(2 * r[i],0.000001))[0]
+    tmp = feat[order[1:],:] - feat[i,:]
+    inds = np.where(np.linalg.norm(feat[order,:] - feat[i,:],axis=1) > max(9 * r[i],0.000001))[0]
     diff = len(order) - len(inds)
     if diff > 10:
       keep.append(i)
@@ -35,15 +35,15 @@ def nms(pred_c,pred_r,pred_s):
  
   index = np.array(keep).astype(np.int32)
   
-  return c[index], r[index], scores[index]   
+  return feat[index], r[index], scores[index]   
 
-def infer_seg(c,r,s,pred_xyz,h=240,w=320):
+def infer_seg(feat,r,s,pred_xyz,h=240,w=320):
   final_seg = np.zeros((h,w))
   count = 1
   instances_seg_pred = []
   instances_scores = [] 
-  for ins_i in xrange(len(r)):
-    map_id = np.linalg.norm(pred_xyz - c[ins_i], axis=2) < r[ins_i] * 3
+  for ins_i in xrange(len(feat)):
+    map_id = np.linalg.norm(pred_xyz - feat[ins_i], axis=2) < r[ins_i] * 9
     empty_id = final_seg < 1.0
     map_id = np.logical_and(empty_id,map_id)
     if np.sum(map_id) > 10:

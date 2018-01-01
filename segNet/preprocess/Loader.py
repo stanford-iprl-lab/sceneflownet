@@ -2,6 +2,7 @@ import numpy as np
 import scipy.ndimage
 from pyquaternion import Quaternion
 import math
+from matplotlib import pyplot as plt
 
 from math import *
 from utils import *
@@ -10,6 +11,10 @@ np.set_printoptions(precision=4,suppress=True,linewidth=300)
 
 h = 240
 w = 320
+
+def load_2m(top_dir):
+  tmp = np.load(top_dir)['labeling'] 
+  return tmp
 
 def load_seg(filepath):
   try:
@@ -21,20 +26,28 @@ def load_seg(filepath):
     return np.zeros((h,w,3))
   return seg
 
-def load_r(filepath):
+def load_r(filepath,secondmoment_file,secondmoment=True):
    height = h
    width = w
    dist_image = np.zeros((height,width,1))
    seg = np.load(filepath)['labeling']
-   d2_image = np.reshape(seg,(-1,3))
-   idx_c = np.unique(d2_image,axis=0)
+   if secondmoment:
+     _2m = load_2m(secondmoment_file) * 50.0
+     feature_map = np.concatenate((seg,_2m),axis=2)
+     feature_map = feature_map.reshape((-1,6+3))
+     idx_c = np.unique(feature_map,axis=0)
+   else:
+     d2_image = np.reshape(seg,(-1,3))
+     idx_c = np.unique(d2_image,axis=0)
+   idx_c = [idx_c[i] for i in xrange(len(idx_c)) if idx_c[i][0] != 0.0 and idx_c[i][1] != 0.0 and idx_c[i][2] != 0.0]
    d2_list = [i for i in xrange(len(idx_c))]
    if len(idx_c) == 1:
-     dist_image = np.ones((height,width,1))
+     dist_image = np.zeros((height,width,1))
    else:
      for i_c in xrange(len(idx_c)):
        dist = np.min(np.array([np.linalg.norm(idx_c[i_c] - idx_c[i]) for i in d2_list if i != i_c]))
-       dist_image[seg[:,:,2] == idx_c[i_c][2]] = dist / 4
+       print(dist)
+       dist_image[seg[:,:,2] == idx_c[i_c][2]] = dist / 10
    return dist_image
  
 def load_xyz(filename):
@@ -76,3 +89,29 @@ def load_xyz(filename):
     return np.zeros((h,w,3))
 
 
+def load_score(inputfilename,gtfilename):
+  xyz = load_xyz(inputfilename)[:,:,0:2]
+  seg = load_seg(gtfilename)[:,:,0:2]
+  score = np.zeros((h,w))
+  score_tmp = score.reshape((-1,1))
+  xyz_tmp = xyz.reshape((-1,2)) 
+  seg_tmp = seg.reshape((-1,2)) 
+  idx_c = np.unique(seg_tmp,axis=0) 
+  diff = xyz_tmp - seg_tmp
+  diff_norm = np.linalg.norm(diff,axis=1)    
+  for idx in idx_c:
+    if idx[0] != 0.0:
+      tmp = np.where(seg_tmp == idx)[0]
+      dist = diff_norm[tmp] 
+      top_k = min(len(dist),300)
+      tmp_indx = dist.argsort()[:top_k]
+      index = tmp[tmp_indx]
+      score_tmp[index] = 1.0 
+    else:  
+      print(idx)
+  score = score_tmp.reshape((h,w)) 
+  return score
+
+if __name__ == '__main__':
+  top_dir = '/home/lins/interactive-segmentation/Data/BlensorResult_2frame/20/frame80_2moment.npz'
+  load_secondmoment(top_dir)

@@ -1,7 +1,7 @@
 import numpy as np
 import os
 
-def IoU(x, y, h=120,w=160):
+def IoU(x, y, h=240,w=320):
     # segmentation IoU of 2 binary map
     x = x.reshape((h,w))
     y = y.reshape((h,w))
@@ -102,21 +102,5 @@ def m_AP__(tp,fp,scores,num_gt):
     return ap
 
 
-
 if __name__ == "__main__":
-    x = np.array([
-        [1, 1, 1, 1, 2, 2],
-        [1, 1, 2, 2, 2, 2],
-        [1, 3, 3, 2, 2, 2],
-        [3, 3, 3, 3, 3, 3]
-        ])
-    y = np.array([
-        [3, 3, 7, 7, 7, 7],
-        [3, 3, 3, 7, 7, 7],
-        [3, 5, 5, 5, 7, 7],
-        [5, 5, 5, 5, 5, 5]
-        ])
-    thres_list = np.linspace(0, 1, 21)
-    x = [('ABE',0.5),('ddd',0.1),('DDD',0.2)]
-    x = sorted(x, key=lambda x: x[1],reverse=True)
-    print(x)
+  pass

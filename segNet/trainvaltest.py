@@ -10,6 +10,7 @@ import sys
 import argparse
 import shutil
 import matplotlib.pyplot as plt
+from mayavi import mlab as mayalab
 
 from local_variables import *
 
@@ -36,16 +37,16 @@ LOGGING_DIR = os.path.join(BASE_DIR,'logging')
 parser = argparse.ArgumentParser()
 parser.add_argument('--model_save_dir',default=os.path.join(MODEL_SAVE_DIR,experiment_name)+'/',help='Directory to save the trained model')
 parser.add_argument('--learning_rate', type=float,default=0.0001,help='Initial learning rate.')
-parser.add_argument('--num_epochs',type=int,default=1,help='Number of epochs to run trainer.')
+parser.add_argument('--num_epochs',type=int,default=80,help='Number of epochs to run trainer.')
 parser.add_argument('--train_batch_size',type=int,default=10,help='Number of models within a batch.')
-parser.add_argument('--val_batch_size',type=int,default=1,help='Number of models within a batch.')
-parser.add_argument('--test_batch_size',type=int,default=2,help='Number of models within a batch.')
-parser.add_argument('--num_train_model',type=int,default=800,help='Number of models within a batch.')
+parser.add_argument('--val_batch_size',type=int,default=10,help='Number of models within a batch.')
+parser.add_argument('--test_batch_size',type=int,default=1,help='Number of models within a batch.')
+parser.add_argument('--num_train_model',type=int,default=3199,help='Number of models within a batch.')
 parser.add_argument('--num_val_model',type=int,default=800,help='Number of models within a batch.')
 parser.add_argument('--num_test_model',type=int,default=800,help='Number of models within a batch.')
 parser.add_argument('--max_model_to_keep',type=int,default=400,help='max saved models')
 parser.add_argument('--log_dir',default=os.path.join(LOGGING_DIR,experiment_name),help='folder to save logging infor')
-parser.add_argument('--train_tfrecords_filename',default=os.path.join(DATA_DIR,'Tfrecords_SegNet','val.tfrecords'),help='directory to contain train tfrecord files')
+parser.add_argument('--train_tfrecords_filename',default=os.path.join(DATA_DIR,'Tfrecords_SegNet','train.tfrecords'),help='directory to contain train tfrecord files')
 parser.add_argument('--val_tfrecords_filename',default=os.path.join(DATA_DIR,'Tfrecords_SegNet','val.tfrecords'),help='directory to contain train tfrecord files')
 parser.add_argument('--result_save_dir',default=os.path.join(RESULT_SAVE_DIR,experiment_name)+'/',help='Directory to save the result')
 
@@ -57,8 +58,7 @@ from tf_libs.experiment import Experiment
 if not os.path.exists(FLAGS.log_dir):
   os.mkdir(FLAGS.log_dir)
 
-
-log = LOG(FLAGS.log_dir,'log_train.txt')
+log = LOG(FLAGS.log_dir,'log.txt')
 
 ex = Experiment(FLAGS,inputs,cnnmodel,loss,log)
 ex.whole_process()
