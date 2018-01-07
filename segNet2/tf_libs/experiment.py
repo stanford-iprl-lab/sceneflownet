@@ -367,55 +367,53 @@ class Experiment:
         pred_frame1_xyz = self.inputv['frame2_xyz'][0] 
         frame1_id = np.unique(self.gtv['frame1_id'][0])
         frame2_id = np.unique(self.gtv['frame2_id'][0]) 
-        print(frame1_id)
-        print(frame2_id)
 
         for frame_id_  in frame2_id:
-           if frame_id_ > 0 and frame_id_ in frame1_id:
-             frame2_model_id = self.gtv['frame2_id'][0] == frame_id_
-             frame1_model_id = self.gtv['frame1_id'][0] == frame_id_
+          if frame_id_ > 0 and frame_id_ in frame1_id:
+            frame2_model_id = self.gtv['frame2_id'][0] == frame_id_
+            frame1_model_id = self.gtv['frame1_id'][0] == frame_id_
 
-             pred_transl = self.predv['transl_masked'][0][frame2_model_id]
-             pred_transl = np.mean(pred_transl,axis=0)
-             pred_frame1_xyz_ = pred_frame1_xyz[frame2_model_id]
+            pred_transl = self.predv['transl_masked'][0][frame2_model_id]
+            pred_transl = np.mean(pred_transl,axis=0)
+            pred_frame1_xyz_ = pred_frame1_xyz[frame2_model_id]
 
-             pred_frame1_xyz_ += pred_transl
+            pred_frame1_xyz_ += pred_transl
              #print("pred_transl")
              #print(pred_transl)
 
-             gt_transl = self.gtv['transl'][0][frame2_model_id]
-             gt_transl = np.mean(gt_transl,axis=0)
+            gt_transl = self.gtv['transl'][0][frame2_model_id]
+            gt_transl = np.mean(gt_transl,axis=0)
              #print("gt_transl")
              #print(gt_transl)
  
-             frame1_center = self.gtv['frame1_xyz'][0][frame1_model_id]
-             frame1_center = np.mean(frame1_center,axis=0)
-             pred_frame1_xyz_ -= frame1_center
+            frame1_center = self.gtv['frame1_xyz'][0][frame1_model_id]
+            frame1_center = np.mean(frame1_center,axis=0)
+            pred_frame1_xyz_ -= frame1_center
              
-             pred_rot = self.predv['rot_masked'][0][frame2_model_id] 
-             pred_rot = np.mean(pred_rot,axis=0)
-             print('pred_rot')
-             print(pred_rot)
-             print(np.linalg.norm(pred_rot))
+            pred_rot = self.predv['rot_masked'][0][frame2_model_id] 
+            pred_rot = np.mean(pred_rot,axis=0)
+            print('pred_rot')
+            print(pred_rot)
+            print(np.linalg.norm(pred_rot))
 
-             gt_rot = self.gtv['rot'][0][frame2_model_id] 
-             gt_rot = np.mean(gt_rot,axis=0)
-             print('gt_rot')
-             print(gt_rot)
-             print(np.linalg.norm(gt_rot))
+            gt_rot = self.gtv['rot'][0][frame2_model_id] 
+            gt_rot = np.mean(gt_rot,axis=0)
+            print('gt_rot')
+            print(gt_rot)
+            print(np.linalg.norm(gt_rot))
 
-             pred_rot = angleaxis_rotmatrix(pred_rot)        
-             pred_frame1_xyz_ = pred_rot.dot(pred_frame1_xyz_.T).T + frame1_center
+            pred_rot = angleaxis_rotmatrix(pred_rot)        
+            pred_frame1_xyz_ = pred_rot.dot(pred_frame1_xyz_.T).T + frame1_center
                 
-             frame1_model_id = self.gtv['frame1_id'][0] == frame_id_
-             input_frame1_xyz = self.inputv['frame1_xyz'][0][frame1_model_id]
-             input_frame2_xyz = self.inputv['frame2_xyz'][0][frame2_model_id]  
-             mayalab.points3d(pred_frame1_xyz_[:,0], pred_frame1_xyz_[:,1], pred_frame1_xyz_[:,2], color=(0,1,0),mode='sphere',scale_factor=0.01)
+            frame1_model_id = self.gtv['frame1_id'][0] == frame_id_
+            input_frame1_xyz = self.inputv['frame1_xyz'][0][frame1_model_id]
+            input_frame2_xyz = self.inputv['frame2_xyz'][0][frame2_model_id]  
+            mayalab.points3d(pred_frame1_xyz_[:,0], pred_frame1_xyz_[:,1], pred_frame1_xyz_[:,2], color=(0,1,0),mode='sphere',scale_factor=0.01)
         
-             mayalab.points3d(input_frame1_xyz[:,0],input_frame1_xyz[:,1],input_frame1_xyz[:,2], color=(1,0,0),mode='sphere',scale_factor=0.01) 
-             mayalab.points3d(input_frame2_xyz[:,0],input_frame2_xyz[:,1],input_frame2_xyz[:,2], color=(0,0,1),mode='sphere',scale_factor=0.01) 
+            mayalab.points3d(input_frame1_xyz[:,0],input_frame1_xyz[:,1],input_frame1_xyz[:,2], color=(1,0,0),mode='sphere',scale_factor=0.01) 
+            mayalab.points3d(input_frame2_xyz[:,0],input_frame2_xyz[:,1],input_frame2_xyz[:,2], color=(0,0,1),mode='sphere',scale_factor=0.01) 
  
-             mayalab.show()
+        mayalab.show()
  
          
         #mayalab.points3d(input_frame2_xyz[:,0],input_frame2_xyz[:,1],input_frame2_xyz[:,2],color=(0,1,0),mode='point')
@@ -490,11 +488,11 @@ class Experiment:
     self.sess.close()
 
   def whole_process(self):
-    self.train(29)
-    best_epoch = self.validate(29,self.flags.num_epochs)
+    self.train()
+    best_epoch = self.validate(0,self.flags.num_epochs)
     self.log.log_plotting(['transl','rot','total_loss','flow'])
     #self.test(best_epoch)
-    best_epoch = best_epoch #self.flags.num_epochs - 1
+    #best_epoch = 36#best_epoch #self.flags.num_epochs - 1
     self.save_result(best_epoch) 
     self.analysis(best_epoch)
 

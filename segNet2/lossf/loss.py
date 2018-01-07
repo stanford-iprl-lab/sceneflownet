@@ -15,24 +15,15 @@ def loss(frame2_input_xyz, gt_frame1_pred_xyz, pred_xyz, pred_r, pred_mask, pred
   obj_mask_1  = tf.reshape(obj_mask_origin,[-1,h,w,1])
   obj_mask_dim = tf.tile(obj_mask_1,[1,1,1,dim])
   
-
-  loss_mask = tf.reduce_mean( tf.nn.sparse_softmax_cross_entropy_with_logits(labels=tf.cast(obj_mask_origin,dtype=tf.int32),logits=pred_mask))
- 
-  score_weight = obj_mask_origin + 0.0001
+  loss_mask = tf.reduce_mean( tf.nn.sparse_softmax_cross_entropy_with_logits(labels=tf.cast(obj_mask_origin,dtype=tf.int32),logits=pred_mask)) 
+  score_weight = obj_mask_origin + 0.001
+  
   loss_score = tf.reduce_sum( (score_weight) * tf.nn.sparse_softmax_cross_entropy_with_logits(labels=tf.cast(gt_score,dtype=tf.int32), logits=pred_score)) / tf.reduce_sum(score_weight + 0.000001)
 
   loss_elem = tf.reduce_sum(tf.squared_difference(pred_xyz,gt_xyz)*obj_mask_dim)/tf.reduce_sum(obj_mask_1 + 0.000001)
 
-  transform_weight = tf.reduce_sum(gt_rot * gt_rot,axis=3) + 0.01
-  transform_weight = tf.reshape(transform_weight,[-1,h,w,1])
-  
-  transform_weight_3 = tf.tile(transform_weight,[1,1,1,3]) * obj_mask_dim 
-  transform_weight_1 = transform_weight * obj_mask_1
-
   loss_transl = tf.reduce_sum(obj_mask_dim * tf.squared_difference(pred_transl,gt_transl))/tf.reduce_sum(obj_mask_1 + 0.000001)
-  #loss_rot = tf.reduce_sum(obj_mask_dim * tf.squared_difference(pred_rot,gt_rot))/tf.reduce_sum(obj_mask_1 + 0.000001)
-  #loss_transl = tf.reduce_sum(transform_weight_3 * tf.squared_difference(pred_transl,gt_transl))/tf.reduce_sum(transform_weight_3 + 0.000001)
-  loss_rot = tf.reduce_sum(transform_weight_3 * tf.squared_difference(pred_rot,gt_rot))/tf.reduce_sum(transform_weight_3 + 0.000001)
+  loss_rot = tf.reduce_sum(obj_mask_dim * tf.squared_difference(pred_rot,gt_rot))/tf.reduce_sum(obj_mask_1 + 0.000001)
 
   loss_boundary = tf.reduce_sum(tf.squared_difference(gt_r, pred_r)*obj_mask_1 )/tf.reduce_sum(obj_mask_1 + 0.000001)
   loss_variance = 0.0
@@ -73,7 +64,7 @@ def loss(frame2_input_xyz, gt_frame1_pred_xyz, pred_xyz, pred_r, pred_mask, pred
       rot_tmp_prd = tf.reshape(rot_tmp_prd,(-1,3))
       rot_tmp_mean = tf.reduce_sum(rot_tmp_prd,axis=0)/(tf.reduce_sum(idx_mask)+100.000001)
     
-      angle = tf.linalg.norm(rot_tmp_mean+0.0000000001)
+      angle = tf.norm(rot_tmp_mean+0.0000000001)
       axis = rot_tmp_mean / (angle + 0.000001)
       c = tf.cos(angle)
       v = 1 - c
