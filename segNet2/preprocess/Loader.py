@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 from utils import *
 from math import *
 import os
+from scipy.ndimage import imread
+from mayavi import mlab as mayalab
 
 np.set_printoptions(precision=4,suppress=True,linewidth=300)
 
@@ -37,6 +39,16 @@ def quaternion_matrix(quaternion):
         [    q[1, 3]-q[2, 0],     q[2, 3]+q[1, 0], 1.0-q[1, 1]-q[2, 2], 0.0],
         [                0.0,                 0.0,                 0.0, 1.0]])
 
+def load_rgb(filepath):
+  tmp = imread(filepath)
+  
+  zoom_scale = 0.5
+  r = scipy.ndimage.zoom(tmp[:,:,0], zoom_scale, order=1)
+  g = scipy.ndimage.zoom(tmp[:,:,1], zoom_scale, order=1)
+  b = scipy.ndimage.zoom(tmp[:,:,2], zoom_scale, order=1)
+  image = np.dstack((r,g,b))
+  return image 
+
 def load_labeling(filepath):
   label_id = np.load(filepath)['labeling']
   return label_id
@@ -53,6 +65,40 @@ def tran_rot(filepath):
       tran[idx] = tmp[3]
   return tran,rot
 
+
+def rotmatrix_angleaxis(rot):
+  angleaxis = np.zeros((3,)) 
+  angleaxis[0] = rot[2,1] - rot[1,2]
+  angleaxis[1] = rot[0,2] - rot[2,0]
+  angleaxis[2] = rot[1,0] - rot[0,1]
+  angleaxis = angleaxis / (np.linalg.norm(angleaxis) + 0.000001)
+  tmp = (rot[0,0] + rot[1,1] + rot[2,2] - 1) * 0.5
+  if tmp > 1.0:
+    tmp = 1.0
+  elif tmp < -1.0:
+    tmp = -1.0
+  angle = np.arccos( tmp )
+  angleaxis *= angle
+  assert(np.all(np.logical_not(np.isnan(angleaxis))))
+  return angleaxis
+
+def angleaxis_rotmatrix(angleaxis):
+  angle = np.linalg.norm(angleaxis)
+  axis = angleaxis / (angle + 0.000001)
+  c = np.cos(angle)
+  v = 1 - c
+  s = np.sin(angle)
+  rot = np.zeros((3,3))
+  rot[0,0] = axis[0] ** 2 * v + c
+  rot[0,1] = axis[0] * axis[1] * v - axis[2] * s
+  rot[0,2] = axis[0] * axis[2] * v + axis[1] * s
+  rot[1,0] = axis[0] * axis[1] * v + axis[2] * s
+  rot[1,1] = axis[1] ** 2 * v + c
+  rot[1,2] = axis[1] * axis[2] * v - axis[0] * s
+  rot[2,0] = axis[0] * axis[2] * v - axis[1] * s
+  rot[2,1] = axis[1] * axis[2] * v + axis[0] * s
+  rot[2,2] = axis[2] ** 2 * v + c
+  return rot
 
 def load_transformation(top_dir):
   pgm_filepath = [line for line in os.listdir(top_dir) if line.endswith('.pgm') and line.startswith('frame80')][0]
@@ -77,6 +123,9 @@ def load_transformation(top_dir):
   frame2_id = load_labeling(os.path.join(top_dir,'frame80_labeling_model_id.npz')) 
   frame1_id = load_labeling(os.path.join(top_dir,'frame20_labeling_model_id.npz'))   
 
+  frame2_center = load_seg(os.path.join(top_dir,'frame80_labeling.npz'))
+  frame1_center = load_seg(os.path.join(top_dir,'frame20_labeling.npz'))
+
   frame2_xyz_name = [line for line in os.listdir(top_dir) if line.startswith('frame80') and line.endswith('.pgm')][0]
   frame1_xyz_name = [line for line in os.listdir(top_dir) if line.startswith('frame20') and line.endswith('.pgm')][0]
   frame2_xyz = load_xyz(os.path.join(top_dir,frame2_xyz_name))
@@ -85,12 +134,17 @@ def load_transformation(top_dir):
   frame2_id_list = np.unique(frame2_id)
   frame1_id_list = np.unique(frame1_id)
   
+  if 0:
+    plt.figure(0)
+    plt.imshow(frame1_xyz[:,:,2])
+    plt.figure(1)
+    plt.imshow(frame2_xyz[:,:,2])
+    plt.show()
 
   model_ids = [line.split('frame80_')[1] for line in os.listdir(top_dir) if line.endswith('.txt') and line.startswith('frame80')]
 
   model_ids.sort()
-  print(model_ids)
-  transformation_rot = np.zeros((h,w,9))
+  transformation_rot = np.zeros((h,w,3))
   transformation_translation = np.zeros((h,w,3))
 
   for instance_id in frame2_id_list:
@@ -102,10 +156,22 @@ def load_transformation(top_dir):
       if instance_id in frame1_id_list:
         frame2_tran, frame2_rot = tran_rot(os.path.join(top_dir,'frame80_'+model_ids[int(instance_id)-1]))             
         frame1_tran, frame1_rot = tran_rot(os.path.join(top_dir,'frame20_'+model_ids[int(instance_id)-1]))
-        R12 = frame1_rot.dot(np.linalg.inv(frame2_rot))
-        rot = R.T.dot(R12.dot(R))
-        tran = R.T.dot(frame1_tran-C) + R.T.dot(R12.dot(C-frame2_tran))
-      
+        frame2_vector = frame2_rot[:,1]
+        frame1_vector = frame1_rot[:,1]
+        frame2_vector /= (np.linalg.norm(frame2_vector)+0.000001)
+        frame1_vector /= (np.linalg.norm(frame1_vector)+0.000001)
+        Raxis = np.cross(frame2_vector,frame1_vector)
+        Raxis = Raxis / (np.linalg.norm(Raxis) + 0.000001)
+        angle = np.arccos(np.dot(frame2_vector,frame1_vector))
+        angle_axis = angle * Raxis
+        rot = angleaxis_rotmatrix(angle_axis)
+        rot = R.T.dot(rot.dot(R))
+        #R12 = frame1_rot.dot(np.linalg.inv(frame2_rot))
+        #rot = R.T.dot(R12.dot(R))
+        #tran = R.T.dot(frame1_tran-C) + R.T.dot(R12.dot(C-frame2_tran))
+        if 1:
+          tran = -frame2_tran + frame1_tran
+          tran = R.T.dot(tran)
         tran[2] *= -1.0
         rot[0,2] *= -1.0 
         rot[1,2] *= -1.0
@@ -114,11 +180,31 @@ def load_transformation(top_dir):
       else:        
         tran = np.zeros((3,))
         rot = np.identity(3)
-     
+    
+      angle_axis = rotmatrix_angleaxis(rot)
+      #rot = angleaxis_rotmatrix(angle_axis)
+
+      if 1:#int(instance_id) == 1:
+        frame2_pid = frame2_id == instance_id
+        frame2_pid = frame2_pid.reshape((240,320))
+        frame2_pid_xyz = frame2_xyz[frame2_pid]
+        frame1_pid = frame1_id == instance_id
+        frame1_pid = frame1_pid.reshape((240,320))
+        frame1_pid_xyz = frame1_xyz[frame1_pid]
+        frame1_center_pid = frame1_center[frame1_pid]
+        #frame21_xyz = rot.dot(frame2_pid_xyz.T).T + tran
+        frame21_xyz = frame2_pid_xyz + tran - frame1_center_pid[0,:]
+        frame1_pid_xyz -= frame1_center_pid
+        frame21_xyz = rot.dot(frame21_xyz.T).T
+        mayalab.points3d(frame21_xyz[:,0],frame21_xyz[:,1],frame21_xyz[:,2],mode='sphere')
+        mayalab.points3d(frame1_pid_xyz[:,0],frame1_pid_xyz[:,1],frame1_pid_xyz[:,2],color=(1,0,0),mode='sphere')
+        mayalab.show()
+
       transformation_translation[frame2_pid] = tran
-      transformation_rot[frame2_pid] = rot.reshape((9))
+      transformation_rot[frame2_pid] = angle_axis #rot.reshape((9))
   return transformation_translation, transformation_rot
- 
+
+
 def load_seg(filepath):
   try:
     seg = np.load(filepath)['labeling']
@@ -136,15 +222,18 @@ def load_r(filepath):
    seg = np.load(filepath)['labeling']
    d2_image = np.reshape(seg,(-1,3))
    idx_c = np.unique(d2_image,axis=0)
+   idx_c = [idx_c[i] for i in xrange(len(idx_c)) if idx_c[i][0] != 0.0 and idx_c[i][1] != 0.0 and idx_c[i][2] != 0.0]
    d2_list = [i for i in xrange(len(idx_c))]
    if len(idx_c) == 1:
-     dist_image = np.ones((height,width,1))
+     dist_image = np.zeros((height,width,1))
    else:
      for i_c in xrange(len(idx_c)):
        dist = np.min(np.array([np.linalg.norm(idx_c[i_c] - idx_c[i]) for i in d2_list if i != i_c]))
-       dist_image[seg[:,:,2] == idx_c[i_c][2]] = dist / 4
+       dist_image[seg[:,:,2] == idx_c[i_c][2]] = dist / 10
    return dist_image
- 
+
+
+
 def load_xyz(filename):
     """Return image data from a PGM file generated by blensor. """
     fx = 472.92840576171875
@@ -183,5 +272,66 @@ def load_xyz(filename):
             return image
     return np.zeros((h,w,3))
 
+def load_score(inputfilename,gtfilename):
+  xyz = load_xyz(inputfilename)[:,:,0:2]
+  seg = load_seg(gtfilename)[:,:,0:2]
+  score = np.zeros((h,w))
+  score_tmp = score.reshape((-1,1))
+  xyz_tmp = xyz.reshape((-1,2))
+  seg_tmp = seg.reshape((-1,2))
+  idx_c = np.unique(seg_tmp,axis=0)
+  diff = xyz_tmp - seg_tmp
+  diff_norm = np.linalg.norm(diff,axis=1)
+  for idx in idx_c:
+    if idx[0] != 0.0:
+      tmp = np.where(seg_tmp == idx)[0]
+      dist = diff_norm[tmp]
+      top_k = min(len(dist),300)
+      tmp_indx = dist.argsort()[:top_k]
+      index = tmp[tmp_indx]
+      score_tmp[index] = 1.0
+  score = score_tmp.reshape((h,w))
+  return score
+
+def load_predicted_frame1_feat(frame2_input_xyz, frame2_gt_xyz, transformation_file, frame1_id_file, frame2_id_file):
+  frame1_id = np.squeeze(frame1_id_file)
+  frame2_id = np.squeeze(frame2_id_file)
+  transl, rot = transformation_file
+  frame2_id_unique = np.unique(frame2_id)
+  frame1_id_unique = np.unique(frame1_id)
+  pred_frame1_xyz = np.zeros((h,w,3)) 
+  for frame_id in frame2_id_unique:
+    if frame_id > 0 and frame_id in frame1_id_unique:
+       model_id = frame2_id == frame_id
+       transl_model = np.mean(transl[model_id],axis=0)
+       rot_model = np.mean(rot[model_id],axis=0)
+       rot_matrix = angleaxis_rotmatrix(rot_model)
+       pred_frame1_model = frame2_input_xyz[model_id]
+       pred_frame1_model += transl_model
+       pred_frame1_center = np.mean(frame2_gt_xyz[model_id],axis=0) + transl_model
+       pred_frame1_model -= pred_frame1_center
+       pred_frame1_model = rot_matrix.dot(pred_frame1_model.T).T + pred_frame1_center
+       pred_frame1_xyz[model_id] = pred_frame1_model
+  return pred_frame1_xyz
+ 
+
 if __name__ == '__main__':
-  load_transformation('/home/lins/interactive-segmentation/Data/BlensorResult_2frame/300') 
+  top_dir = '/home/lins/interactive-segmentation/Data/BlensorResult_2frame/3'
+  transl, rot = load_transformation('/home/lins/interactive-segmentation/Data/BlensorResult_2frame/3')
+  frame2_input_xyz_file = [line for line in os.listdir(top_dir) if line.endswith('pgm') and line.startswith('frame80')][0]
+  frame1_input_xyz_file = [line for line in os.listdir(top_dir) if line.endswith('pgm') and line.startswith('frame20')][0]
+  frame2_input_xyz = load_xyz(os.path.join(top_dir,frame2_input_xyz_file))
+  frame1_input_xyz = load_xyz(os.path.join(top_dir,frame1_input_xyz_file))
+  plt.figure(0)
+  plt.imshow(frame2_input_xyz[:,:,2]) 
+  plt.figure(1)
+  plt.imshow(frame1_input_xyz[:,:,2])
+  frame2_gt_xyz = load_seg(os.path.join(top_dir,'frame80_labeling.npz'))
+  frame1_id_file = load_labeling(os.path.join(top_dir,'frame20_labeling_model_id.npz'))
+  frame2_id_file = load_labeling(os.path.join(top_dir,'frame80_labeling_model_id.npz')) 
+  plt.figure(2)
+  plt.imshow(frame1_id_file[:,:,0])
+  plt.figure(3)
+  plt.imshow(frame2_id_file[:,:,0])
+  plt.show()
+  load_predicted_frame1_feat(frame2_input_xyz,frame2_gt_xyz, (transl, rot), frame1_id_file,frame2_id_file) 
