@@ -38,15 +38,13 @@ def loss(frame2_input_xyz, gt_frame1_pred_xyz, pred_xyz, pred_r, pred_mask, pred
     idx = tf.reshape(idx,(h,w,1)) 
    
     ins_tmp = tf.ones_like(idx)
-    ones = tf.ones_like(gt_transl[b_i,:,:,2-1]) 
+    ones = tf.ones_like(gt_transl[b_i,:,:,2]) 
     
     obj_mask = obj_mask_origin[b_i]
  
     def flow_loss(z):
-      idx_mask = tf.logical_and(tf.equal(gt_transl[b_i,:,:,2], ones * z) , tf.not_equal(gt_transl[b_i,:,:,2],tf.zeros_like(ones)))
-      print(ones.shape)
-      print(gt_transl[b_i,:,:,2])
-
+      #idx_mask = tf.logical_and(tf.equal(gt_transl[b_i,:,:,2], ones * z) , tf.not_equal(gt_transl[b_i,:,:,2],tf.zeros_like(ones)))
+      idx_mask = tf.equal(gt_transl[b_i,:,:,2], ones * z)
       idx_mask = tf.reshape(idx_mask,[h,w,1]) 
       idx_mask = tf.cast(idx_mask,tf.float32)
       idx_mask = idx_mask * obj_mask_1[b_i]
@@ -68,7 +66,7 @@ def loss(frame2_input_xyz, gt_frame1_pred_xyz, pred_xyz, pred_r, pred_mask, pred
       rot_tmp_mean = tf.reduce_sum(rot_tmp_prd,axis=0)/(tf.reduce_sum(idx_mask)+0.000001)
     
       angle = tf.norm(rot_tmp_mean+0.0000000001)
-      axis = rot_tmp_mean / (angle + 0.000001)
+      axis = rot_tmp_mean / (angle)
       c = tf.cos(angle)
       v = 1 - c
       s = tf.sin(angle)
@@ -85,12 +83,12 @@ def loss(frame2_input_xyz, gt_frame1_pred_xyz, pred_xyz, pred_r, pred_mask, pred
       rot_matrix = tf.stack([rot00, rot10, rot20, rot01, rot11, rot21, rot02, rot12, rot22]) 
       rot_matrix = tf.reshape(rot_matrix,(3,3)) 
      
-      pred_xyz = tf.reshape(frame2_input_xyz[b_i],(-1,3)) 
-      pred_xyz = pred_xyz + transl_tmp_mean - center_tmp_mean
-      pred_xyz = tf.matmul(pred_xyz,rot_matrix) + center_tmp_mean
+      pred_frame1_xyz = tf.reshape(frame2_input_xyz[b_i],(-1,3)) 
+      pred_frame1_xyz = pred_frame1_xyz + transl_tmp_mean - center_tmp_mean
+      pred_frame1_xyz = tf.matmul(pred_frame1_xyz,rot_matrix) + center_tmp_mean
 
-      pred_xyz = tf.reshape(pred_xyz,(h,w,3)) 
-      loss_tmp = tf.reduce_sum(idx_mask_3d * tf.squared_difference(pred_xyz,gt_frame1_pred_xyz[b_i])) / (tf.reduce_sum(idx_mask)+0.000001) 
+      pred_frame1_xyz = tf.reshape(pred_frame1_xyz,(h,w,3)) 
+      loss_tmp = tf.reduce_sum(idx_mask_3d * tf.squared_difference(pred_frame1_xyz, gt_frame1_pred_xyz[b_i])) / (tf.reduce_sum(idx_mask)+0.000001) 
       return loss_tmp
   
     loss_flow += tf.reduce_mean(tf.map_fn(flow_loss,y)) 
