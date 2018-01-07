@@ -44,6 +44,9 @@ def loss(frame2_input_xyz, gt_frame1_pred_xyz, pred_xyz, pred_r, pred_mask, pred
  
     def flow_loss(z):
       idx_mask = tf.logical_and(tf.equal(gt_transl[b_i,:,:,2], ones * z) , tf.not_equal(gt_transl[b_i,:,:,2],tf.zeros_like(ones)))
+      print(ones.shape)
+      print(gt_transl[b_i,:,:,2])
+
       idx_mask = tf.reshape(idx_mask,[h,w,1]) 
       idx_mask = tf.cast(idx_mask,tf.float32)
       idx_mask = idx_mask * obj_mask_1[b_i]
@@ -62,7 +65,7 @@ def loss(frame2_input_xyz, gt_frame1_pred_xyz, pred_xyz, pred_r, pred_mask, pred
  
       rot_tmp_prd = idx_mask_3d * pred_rot[b_i]
       rot_tmp_prd = tf.reshape(rot_tmp_prd,(-1,3))
-      rot_tmp_mean = tf.reduce_sum(rot_tmp_prd,axis=0)/(tf.reduce_sum(idx_mask)+100.000001)
+      rot_tmp_mean = tf.reduce_sum(rot_tmp_prd,axis=0)/(tf.reduce_sum(idx_mask)+0.000001)
     
       angle = tf.norm(rot_tmp_mean+0.0000000001)
       axis = rot_tmp_mean / (angle + 0.000001)
