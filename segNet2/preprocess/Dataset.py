@@ -7,7 +7,7 @@ import os
 import numpy
 from multiprocessing import Pool
 import shutil
-
+import cv2
 import numpy as np
 from six.moves import urllib
 from six.moves import xrange  # pylint: disable=redefined-builtin
@@ -39,14 +39,13 @@ class Dataset(object):
     self.num_instance =0
 
     self.generate_path()
-    #print(self._ins_path)
-    #print(self._outs_path)
-
     self._tfrecords()
 
   def generate_path(self):
     self._ins_path['1framexyz'] = []
     self._ins_path['2framexyz'] = []
+    self._ins_path['1framergb'] = []
+    self._ins_path['2framergb'] = []
     self._outs_path['1framexyz'] = []
     self._outs_path['2framexyz'] = []
     self._outs_path['1frameid'] = [] 
@@ -59,6 +58,9 @@ class Dataset(object):
      
       ins_['1framexyz'] = [line for line in os.listdir(ins_sub_dir) if line.endswith('.pgm') and line.startswith('frame20')]
       ins_['2framexyz'] = [line for line in os.listdir(ins_sub_dir) if line.endswith('.pgm') and line.startswith('frame80')]
+      ins_['1framergb'] = [line for line in os.listdir(ins_sub_dir) if line.endswith('.png') and line.startswith('frame20')]
+      ins_['2framergb'] = [line for line in os.listdir(ins_sub_dir) if line.endswith('.png') and line.startswith('frame80')]
+      
       outs_['1framexyz'] = [line for line in os.listdir(ins_sub_dir) if line.endswith('labeling.npz') and line.startswith('frame20')]
       outs_['2framexyz'] = [line for line in os.listdir(ins_sub_dir) if line.endswith('labeling.npz') and line.startswith('frame80')]
       outs_['1frameid'] = [line for line in os.listdir(ins_sub_dir) if line.endswith('model_id.npz') and line.startswith('frame20')]
@@ -74,16 +76,15 @@ class Dataset(object):
       if np.all(num_list == num_list[0]) and num_list[0] == 1:
         self._ins_path['1framexyz'].append(os.path.join(ins_sub_dir,ins_['1framexyz'][0]))
         self._ins_path['2framexyz'].append(os.path.join(ins_sub_dir,ins_['2framexyz'][0]))
+        self._ins_path['1framergb'].append(os.path.join(ins_sub_dir,ins_['1framergb'][0]))
+        self._ins_path['2framergb'].append(os.path.join(ins_sub_dir,ins_['2framergb'][0]))
         self._outs_path['2framexyz'].append(os.path.join(ins_sub_dir,outs_['2framexyz'][0])) 
         self._outs_path['1framexyz'].append(os.path.join(ins_sub_dir,outs_['1framexyz'][0]))
         self._outs_path['1frameid'].append(os.path.join(ins_sub_dir,outs_['1frameid'][0]))
         self._outs_path['2frameid'].append(os.path.join(ins_sub_dir,outs_['2frameid'][0]))
         self._outs_path['transformation'].append(ins_sub_dir)
 
-    #print('path ')
-    #print(self._ins_path['1framexyz'])
     self.num_instance = len(self._ins_path['1framexyz'])
-    #print('num instance %d' % self.num_instance)
 
   def _tfrecords(self):
     total_path = os.path.join(DATA_DIR,'Tfrecords_SegNet2',self.tfrecords_filename)
@@ -95,43 +96,87 @@ class Dataset(object):
     for idx in xrange(self.num_instance):
       ins_['1framexyz'] = load_xyz(self._ins_path['1framexyz'][idx]).astype(np.float32)
       ins_['2framexyz'] = load_xyz(self._ins_path['2framexyz'][idx]).astype(np.float32)
-
+      ins_['1framergb'] = load_rgb(self._ins_path['1framergb'][idx]).astype(np.float32)
+      ins_['2framergb'] = load_rgb(self._ins_path['2framergb'][idx]).astype(np.float32)
       outs_['1framexyz'] = load_seg(self._outs_path['1framexyz'][idx]).astype(np.float32)
       outs_['2framexyz'] = load_seg(self._outs_path['2framexyz'][idx]).astype(np.float32)
+      outs_['1framer'] = load_r(self._outs_path['1framexyz'][idx]).astype(np.float32)
+      outs_['1framescore'] = load_score(self._ins_path['1framexyz'][idx],self._outs_path['1framexyz'][idx]).astype(np.float32)
       outs_['2framer'] = load_r(self._outs_path['2framexyz'][idx]).astype(np.float32)
+      outs_['2framescore'] = load_score(self._ins_path['2framexyz'][idx],self._outs_path['2framexyz'][idx]).astype(np.float32)
+ 
+      outs_['1frameid'] = load_labeling(self._outs_path['1frameid'][idx]).astype(np.float32)
+      outs_['2frameid'] = load_labeling(self._outs_path['2frameid'][idx]).astype(np.float32)
 
       outs_['trans_translation'], outs_['trans_rot'] = load_transformation(self._outs_path['transformation'][idx])
+      outs_['trans_translation'] =  outs_['trans_translation'].astype(np.float32)
+      outs_['trans_rot'] =  outs_['trans_rot'].astype(np.float32)
 
+      outs_['pred_1frame_xyz'] = load_predicted_frame1_feat(ins_['2framexyz'], outs_['2framexyz'], (outs_['trans_translation'], outs_['trans_rot']), outs_['1frameid'], outs_['2frameid']).astype(np.float32)
       instance_id = idx
       print(idx)
 
-      if False:
+      if 0:
         plt.figure(0)
-        plt.imshow(ins_[:,:,2])
+        plt.imshow(ins_['2framexyz'][:,:,2])
         plt.figure(1)
-        plt.imshow(out_label[:,:,2])
+        plt.imshow(ins_['2framergb'])
         plt.figure(2) 
-        plt.imshow(out_r[:,:,0])
+        plt.imshow(ins_['1framexyz'][:,:,2])
+        plt.figure(3)
+        plt.imshow(ins_['1framergb'])
+        plt.figure(4)
+        plt.imshow(outs_['pred_1frame_xyz'][:,:,2])
+  #      plt.imshow(outs_['score'])
+  #      plt.figure(5)
+  #      plt.imshow(outs_['2framer'][:,:,0])
+        #plt.figure(5)
+        #plt.imshow(outs_['trans_rot']) 
         plt.show()
-
+        
+      if 0:
+        img = cv2.imread(self._ins_path['1framergb'][idx])
+        cv2.imshow('image',ins_['1framergb'])
+        cv2.waitKey()
+        
+      ins_1frame_rgb = ins_['1framergb'].tostring()
+      ins_2frame_rgb = ins_['2framergb'].tostring()
       ins_1frame_xyz = ins_['1framexyz'].tostring()
       ins_2frame_xyz = ins_['2framexyz'].tostring()
       outs_1frame_xyz = outs_['1framexyz'].tostring()
       outs_2frame_xyz = outs_['2framexyz'].tostring()
+      outs_1frame_r = outs_['2framer'].tostring()
       outs_2frame_r = outs_['2framer'].tostring()
+      
+      outs_1frame_score = outs_['1framescore'].tostring()
+      outs_2frame_score = outs_['2framescore'].tostring()
+  
       outs_trans_translation = outs_['trans_translation'].tostring()
       outs_trans_rot = outs_['trans_rot'].tostring()
+   
+      outs_1frame_id = outs_['1frameid'].tostring()
+      outs_2frame_id = outs_['2frameid'].tostring()
+
+      outs_1frame_pred_xyz =  outs_['pred_1frame_xyz'].tostring()
 
       example = tf.train.Example(features=tf.train.Features(feature={
           'instance_id':_int64_feature(instance_id),
           'in_1frame_xyz':_bytes_feature(ins_1frame_xyz),
           'in_2frame_xyz':_bytes_feature(ins_2frame_xyz),
+          'in_1frame_rgb':_bytes_feature(ins_1frame_rgb),
+          'in_2frame_rgb':_bytes_feature(ins_2frame_rgb), 
           'outs_1frame_xyz':_bytes_feature(outs_1frame_xyz),
           'outs_2frame_xyz':_bytes_feature(outs_2frame_xyz),
+          'outs_1frame_id':_bytes_feature(outs_1frame_id),
+          'outs_2frame_id':_bytes_feature(outs_2frame_id), 
+          'outs_1frame_r':_bytes_feature(outs_1frame_r), 
           'outs_2frame_r':_bytes_feature(outs_2frame_r),
+          'outs_1frame_score':_bytes_feature(outs_1frame_score),
+          'outs_2frame_score':_bytes_feature(outs_2frame_score),
+          'outs_1frame_pred_xyz':_bytes_feature(outs_1frame_pred_xyz),
           'outs_trans_translation':_bytes_feature(outs_trans_translation),
-          'outs_trans_rot':_bytes_feature(outs_trans_rot)}
-          ))
+          'outs_trans_rot':_bytes_feature(outs_trans_rot),
+        }))
 
       writer.write(example.SerializeToString())
 
