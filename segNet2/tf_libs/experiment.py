@@ -8,6 +8,8 @@ import os
 import sys
 import time
 import shutil
+import datetime
+import pytz
 
 from tf_libs.tf_logging import LOG
 from tf_libs.save_result import generate_result_folder, save_gt_segments, save_pred_segments
@@ -44,7 +46,7 @@ class Experiment:
     init_op = tf.group(tf.global_variables_initializer(),
                             tf.local_variables_initializer())
     config = tf.ConfigProto()
-    config.gpu_options.allow_growth = True
+    config.gpu_options.allow_growth = False
     self.sess = tf.Session(config=config)
     self.sess.run(init_op)
 
@@ -193,15 +195,16 @@ class Experiment:
 
     coord = tf.train.Coordinator()
     threads = tf.train.start_queue_runners(sess=self.sess,coord=coord)
-
+    start_time = time.time()
     self.loss_value_init()
-    print('%d batch_size ' % (self.batch_size))
 
     if restore_epoch >= 0:
       self.epoch = restore_epoch + 1
     else:
       self.epoch = 0
     try:
+      current_time = datetime.datetime.now(pytz.utc).astimezone(pytz.timezone('US/Pacific-New'))
+      print('At %s training starts from epoch %d !!! %d batch_size ' % (str(current_time),self.epoch,self.batch_size))
       step=0
       while not coord.should_stop():
 #        _ , self.lossv['rot'], self.lossv['transl_variance'], self.lossv['transl'], self.lossv['total_loss'], self.lossv['mask'], self.lossv['elem'], self.lossv['boundary'], self.lossv['variance'], self.lossv['violation'], self.lossv['score'] = self.sess.run([self.train_op, self.loss['rot'], self.loss['transl_variance'], self.loss['transl'], self.cost, self.loss['mask'], self.loss['elem'], self.loss['boundary'], self.loss['variance'], self.loss['violation'], self.loss['score']])
@@ -218,8 +221,13 @@ class Experiment:
           self.loss_value_average()
           self.report_loss_value('train')
           self.saver.save(self.sess,self.flags.model_save_dir,global_step=self.epoch)
+          end_time = time.time()
+          print('Epoch %d last %f minutes' % (self.epoch, (end_time-start_time)/60.0))
+          start_time = time.time()
           self.epoch += 1
           self.loss_value_init()
+          current_time = datetime.datetime.now(pytz.utc).astimezone(pytz.timezone('US/Pacific-New')) 
+          print('At %s training starts from epoch %d' % (str(current_time),self.epoch))
         if self.epoch >= self.flags.num_epochs:
           break     
     except tf.errors.OutOfRangeError:
