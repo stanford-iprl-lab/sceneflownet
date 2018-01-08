@@ -92,6 +92,7 @@ def loss(frame2_input_xyz, gt_frame1_pred_xyz, pred_xyz, pred_r, pred_mask, pred
   
     loss_flow += tf.reduce_mean(tf.map_fn(flow_loss,y)) 
    
+  loss_flow /= float(batch_size)    
    
   for b_i in xrange(batch_size):
     tmp = gt_xyz[b_i,:,:,2]

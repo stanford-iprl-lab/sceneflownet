@@ -177,10 +177,6 @@ class Experiment:
 
  
   def loss_value_average(self):
-    print("self.num_batch")
-    print(self.num_batch)
-    print("self.batch_size") 
-    print(self.batch_size)
     for key, value in self.loss_dict.iteritems():
       self.loss_dict[key] /= self.num_batch 
 
