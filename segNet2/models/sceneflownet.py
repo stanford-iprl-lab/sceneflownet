@@ -36,7 +36,7 @@ def generate_cc_weight_matrix(h=30,w=40,r=10):
           #if index_w >= 0 and index_w < w_cc_mat
 
 
-rad = 5
+rad = 10
 
 def cnnmodel(frame1_xyz,frame1_rgb,frame2_xyz,frame2_rgb):
   frame1_input = tf.concat([frame1_xyz,frame1_rgb],3)
