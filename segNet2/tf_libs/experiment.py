@@ -129,7 +129,7 @@ class Experiment:
       self.gt['frame2_r'], \
       self.gt['frame2_score'], batch_size=self.batch_size)
 
-    self.cost = self.loss['flow']  + self.loss['transl'] * 100.0  +  self.loss['rot'] #+ self.loss['mask'] # + self.loss['elem'] * 100.0 + self.loss['boundary'] * 1000.0 + self.loss['score'] * 0.5 + self.loss['violation'] + self.loss['variance']
+    self.cost = self.loss['flow'] * 100.0  + self.loss['transl'] * 100.0  +  self.loss['rot'] #+ self.loss['mask'] # + self.loss['elem'] * 100.0 + self.loss['boundary'] * 1000.0 + self.loss['score'] * 0.5 + self.loss['violation'] + self.loss['variance']
 
   def build_framework(self,restore_epoch,train_val_test):
     if restore_epoch >= 0:
