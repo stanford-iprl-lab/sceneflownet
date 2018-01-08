@@ -177,6 +177,10 @@ class Experiment:
 
  
   def loss_value_average(self):
+    print("self.num_batch")
+    print(self.num_batch)
+    print("self.batch_size") 
+    print(self.batch_size)
     for key, value in self.loss_dict.iteritems():
       self.loss_dict[key] /= self.num_batch 
 
@@ -214,7 +218,7 @@ class Experiment:
         self.lossv['rot'], \
         self.lossv['transl'] = self.sess.run([self.train_op, \
           self.cost,self.loss['flow'],self.loss['rot'], self.loss['transl']])
-        self.loss_value_add({'flow':self.lossv['flow'], 'total_loss':self.lossv['total_loss'],'rot':self.lossv['rot'],'transl':self.lossv['transl']*100.0})
+        self.loss_value_add({'flow':self.lossv['flow'], 'total_loss':self.lossv['total_loss'], 'rot':self.lossv['rot'], 'transl':self.lossv['transl']*100.0})
         #print('flow:%f rot:%f transl:%f' % (self.lossv['flow'],self.lossv['rot'], self.lossv['transl'])) 
         step += 1
         if step % self.num_batch == 0:

@@ -43,7 +43,6 @@ def loss(frame2_input_xyz, gt_frame1_pred_xyz, pred_xyz, pred_r, pred_mask, pred
     obj_mask = obj_mask_origin[b_i]
  
     def flow_loss(z):
-      #idx_mask = tf.logical_and(tf.equal(gt_transl[b_i,:,:,2], ones * z) , tf.not_equal(gt_transl[b_i,:,:,2],tf.zeros_like(ones)))
       idx_mask = tf.equal(gt_transl[b_i,:,:,2], ones * z)
       idx_mask = tf.reshape(idx_mask,[h,w,1]) 
       idx_mask = tf.cast(idx_mask,tf.float32)
