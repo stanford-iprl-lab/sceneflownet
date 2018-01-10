@@ -51,6 +51,8 @@ class Dataset(object):
     self._outs_path['1frameid'] = [] 
     self._outs_path['2frameid'] = []
     self._outs_path['transformation'] = []
+    self._outs_path['cc'] = []
+
     ins_= {}
     outs_ = {}
     for id_line in xrange(self._num_examples):
@@ -65,7 +67,8 @@ class Dataset(object):
       outs_['2framexyz'] = [line for line in os.listdir(ins_sub_dir) if line.endswith('labeling.npz') and line.startswith('frame80')]
       outs_['1frameid'] = [line for line in os.listdir(ins_sub_dir) if line.endswith('model_id.npz') and line.startswith('frame20')]
       outs_['2frameid'] = [line for line in os.listdir(ins_sub_dir) if line.endswith('model_id.npz') and line.startswith('frame80')]
-      
+      outs_['cc'] = [line for line in os.listdir(ins_sub_dir) if line.endswith('cc.npz')]
+
       num_list = []
       for key in ins_:
         num_list.append(len(ins_[key]))
@@ -83,6 +86,7 @@ class Dataset(object):
         self._outs_path['1frameid'].append(os.path.join(ins_sub_dir,outs_['1frameid'][0]))
         self._outs_path['2frameid'].append(os.path.join(ins_sub_dir,outs_['2frameid'][0]))
         self._outs_path['transformation'].append(ins_sub_dir)
+        self._outs_path['cc'].append(os.path.join(ins_sub_dir,outs_['cc'][0]))
 
     self.num_instance = len(self._ins_path['1framexyz'])
 
@@ -114,6 +118,8 @@ class Dataset(object):
 
       outs_['pred_1frame_xyz'] = load_predicted_frame1_feat(ins_['2framexyz'], outs_['2framexyz'], (outs_['trans_translation'], outs_['trans_rot']), outs_['1frameid'], outs_['2frameid']).astype(np.float32)
       instance_id = idx
+      outs_['cc'] = load_cc(self._outs_path['cc'][idx]).astype(np.float32)
+      print(outs_['cc'].shape)
       print(idx)
 
       if 0:
@@ -158,6 +164,8 @@ class Dataset(object):
       outs_2frame_id = outs_['2frameid'].tostring()
 
       outs_1frame_pred_xyz =  outs_['pred_1frame_xyz'].tostring()
+      outs_cc = outs_['cc'].tostring()
+
 
       example = tf.train.Example(features=tf.train.Features(feature={
           'instance_id':_int64_feature(instance_id),
@@ -176,6 +184,7 @@ class Dataset(object):
           'outs_1frame_pred_xyz':_bytes_feature(outs_1frame_pred_xyz),
           'outs_trans_translation':_bytes_feature(outs_trans_translation),
           'outs_trans_rot':_bytes_feature(outs_trans_rot),
+          'outs_cc':_bytes_feature(outs_cc),
         }))
 
       writer.write(example.SerializeToString())
@@ -184,5 +193,5 @@ class Dataset(object):
 
 if __name__ == '__main__':
   from data_preparing import train_val_test_list 
-  #train_dataset = Dataset(train_val_test_list._val, ins_dir=os.path.join(DATA_DIR,'BlensorResult_2frame'), ins_extension='.pgm',flag_rotation_aug=True,tfrecords_filename='val.tfrecords') 
-  train_dataset = Dataset(train_val_test_list._train, ins_dir=os.path.join(DATA_DIR,'BlensorResult_2frame'), ins_extension='.pgm',flag_rotation_aug=True,tfrecords_filename='train.tfrecords') 
+  train_dataset = Dataset(train_val_test_list._val, ins_dir=os.path.join(DATA_DIR,'BlensorResult_2frame'), ins_extension='.pgm',flag_rotation_aug=True,tfrecords_filename='val.tfrecords') 
+  #train_dataset = Dataset(train_val_test_list._train, ins_dir=os.path.join(DATA_DIR,'BlensorResult_2frame'), ins_extension='.pgm',flag_rotation_aug=True,tfrecords_filename='train.tfrecords') 
