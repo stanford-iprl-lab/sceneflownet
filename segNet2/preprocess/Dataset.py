@@ -7,7 +7,6 @@ import os
 import numpy
 from multiprocessing import Pool
 import shutil
-import cv2
 import numpy as np
 from six.moves import urllib
 from six.moves import xrange  # pylint: disable=redefined-builtin
