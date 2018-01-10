@@ -193,5 +193,5 @@ class Dataset(object):
 
 if __name__ == '__main__':
   from data_preparing import train_val_test_list 
-  train_dataset = Dataset(train_val_test_list._val, ins_dir=os.path.join(DATA_DIR,'BlensorResult_2frame'), ins_extension='.pgm',flag_rotation_aug=True,tfrecords_filename='val.tfrecords') 
-  #train_dataset = Dataset(train_val_test_list._train, ins_dir=os.path.join(DATA_DIR,'BlensorResult_2frame'), ins_extension='.pgm',flag_rotation_aug=True,tfrecords_filename='train.tfrecords') 
+  #train_dataset = Dataset(train_val_test_list._val, ins_dir=os.path.join(DATA_DIR,'BlensorResult_2frame'), ins_extension='.pgm',flag_rotation_aug=True,tfrecords_filename='val.tfrecords') 
+  train_dataset = Dataset(train_val_test_list._train, ins_dir=os.path.join(DATA_DIR,'BlensorResult_2frame'), ins_extension='.pgm',flag_rotation_aug=True,tfrecords_filename='train.tfrecords') 
