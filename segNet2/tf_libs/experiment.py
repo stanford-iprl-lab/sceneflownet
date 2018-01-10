@@ -78,12 +78,13 @@ class Experiment:
     self.gt['transl'], \
     self.gt['rot'], \
     self.gt['frame1_pred_xyz'], \
+    self.gt['cc'],\
     self.instance_id = self.inputf(batch_size = self.batch_size, num_epochs = num_epochs, tfrecords_filename = tfrecords_filename)
-    
+    print(self.gt['cc'].shape)
     self.input['frame1_rgb'] = self.input['frame1_rgb'] / 255.0 - 0.5
     self.input['frame2_rgb'] = self.input['frame2_rgb'] / 255.0 - 0.5
 
-    self.pred['frame2_mask'], self.pred['frame2_r'], self.pred['frame2_xyz'], self.pred['frame2_score'], self.pred['transl'], self.pred['rot'] = self.model(self.input['frame1_xyz'], self.input['frame1_rgb'], self.input['frame2_xyz'], self.input['frame2_rgb'])
+    self.pred['frame2_mask'], self.pred['frame2_r'], self.pred['frame2_xyz'], self.pred['frame2_score'], self.pred['transl'], self.pred['rot'] = self.model(self.input['frame1_xyz'], self.input['frame1_rgb'], self.input['frame2_xyz'], self.input['frame2_rgb'], self.gt['cc'])
 
     self.pred['frame2_mask_positive'] = tf.sigmoid(self.pred['frame2_mask'])[:,:,:,1]
 
@@ -129,7 +130,7 @@ class Experiment:
       self.gt['frame2_r'], \
       self.gt['frame2_score'], batch_size=self.batch_size)
 
-    self.cost = self.loss['flow'] * 100.0  + self.loss['transl'] * 100.0  +  self.loss['rot'] #+ self.loss['mask'] # + self.loss['elem'] * 100.0 + self.loss['boundary'] * 1000.0 + self.loss['score'] * 0.5 + self.loss['violation'] + self.loss['variance']
+    self.cost = self.loss['flow']   + self.loss['transl'] * 100.0  +  self.loss['rot'] #+ self.loss['mask'] # + self.loss['elem'] * 100.0 + self.loss['boundary'] * 1000.0 + self.loss['score'] * 0.5 + self.loss['violation'] + self.loss['variance']
 
   def build_framework(self,restore_epoch,train_val_test):
     if restore_epoch >= 0:
@@ -497,7 +498,7 @@ class Experiment:
 
   def whole_process(self):
     self.train()
-    best_epoch = self.validate(0,self.flags.num_epochs)
+    best_epoch = self.validate(10,self.flags.num_epochs)
     self.log.log_plotting(['transl','rot','total_loss','flow'])
     #self.test(best_epoch)
     #best_epoch = 36#best_epoch #self.flags.num_epochs - 1
