@@ -29,10 +29,9 @@ __global__ void PadData(
   int n  = blockIdx.z;
 
   if (xy >= in_widthheight) {
-    out[((n * out_height + y) * out_width + x) * channels + ch] = 0.0;
+    //out[((n * out_height + y) * out_width + x) * channels + ch] = 0.0;
     return;
   }
-
   float value = in[((n * in_height + y) * in_width + x) * channels + ch];
 
   __syncthreads();
