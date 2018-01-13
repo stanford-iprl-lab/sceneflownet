@@ -2,9 +2,8 @@ import numpy as np
 import tensorflow as tf
 import tflearn
 import sys
-sys.path.append('/home/linshaonju/interactive-segmentation/segNet2/src')
+sys.path.append('/home/lins/interactive-segmentation/segNet2/src')
 from correlation import correlation
-from utils import LeakyReLU
 
 def encoder_rgb(x,reuse=False):
   with tf.name_scope("model_rgb"):
@@ -42,18 +41,18 @@ def encoder(x,reuse=False):
 rad = 10
 dia = 2 * rad + 1
 
-def cnnmodel(frame1_xyz,frame1_rgb,frame2_xyz,frame2_rgb):
-  frame1_feat_rgb = encoder_rgb(frame1_rgb)
-  frame2_feat_rgb = encoder_rgb(frame2_rgb,reuse=True)
+def cnnmodel(frame1_xyz,frame1_rgb,frame2_xyz,frame2_rgb,cc):
+  #frame1_feat_rgb = encoder_rgb(frame1_rgb)
+  #frame2_feat_rgb = encoder_rgb(frame2_rgb,reuse=True)
 
   frame1_feat = encoder(frame1_xyz)
   frame2_feat = encoder(frame2_xyz,reuse=True)
   
-  frame2_feat_rgb = tf.pad(frame2_feat_rgb,paddings=[[0,0],[1,1],[0,0],[0,0]])
-  frame1_feat_rgb = tf.pad(frame1_feat_rgb,paddings=[[0,0],[1,1],[0,0],[0,0]])
+  #frame2_feat_rgb = tf.pad(frame2_feat_rgb,paddings=[[0,0],[1,1],[0,0],[0,0]])
+  #frame1_feat_rgb = tf.pad(frame1_feat_rgb,paddings=[[0,0],[1,1],[0,0],[0,0]])
 
-  cc = correlation(frame2_feat_rgb,frame1_feat_rgb,1,rad,1,1,rad)[:,1:-1,:,:]
-  cc_relu = tf.nn.relu(cc)
+  #cc = correlation(frame2_feat_rgb,frame1_feat_rgb,1,rad,1,1,rad)[:,1:-1,:,:]
+  #cc_relu = tf.nn.relu(cc)
 
   frame1_feat = tf.transpose(frame1_feat,[0,3,1,2]) 
   frame1_feat_padded = tf.pad(frame1_feat,paddings=[[0,0],[0,0],[rad,rad],[rad,rad]])
@@ -68,9 +67,9 @@ def cnnmodel(frame1_xyz,frame1_rgb,frame2_xyz,frame2_rgb):
  
   frame1_list = tf.stack(frame1_list,axis=2)
   frame1_list = tf.transpose(frame1_list,[0,2,3,1])
-  cc_relu = tf.reshape(cc_relu,[-1,30*40,dia * dia,1])
+  cc = tf.reshape(cc,[-1,30*40,dia * dia,1])
   
-  frame1_list = frame1_list * cc_relu
+  frame1_list = frame1_list * cc
   frame1_list = tf.nn.max_pool(frame1_list,ksize=[1,1,dia * dia,1],strides=[1,1,dia * dia,1],padding='VALID')
   frame1_list = tf.reshape(frame1_list,(-1,30,40,64))
   

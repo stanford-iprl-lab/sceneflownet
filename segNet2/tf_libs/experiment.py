@@ -497,7 +497,7 @@ class Experiment:
     self.sess.close()
 
   def whole_process(self):
-    self.train()
+    self.train(4)
     best_epoch = self.validate(10,self.flags.num_epochs)
     self.log.log_plotting(['transl','rot','total_loss','flow'])
     #self.test(best_epoch)
