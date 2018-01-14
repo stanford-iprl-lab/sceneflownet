@@ -84,7 +84,17 @@ class Experiment:
     self.input['frame1_rgb'] = self.input['frame1_rgb'] / 255.0 - 0.5
     self.input['frame2_rgb'] = self.input['frame2_rgb'] / 255.0 - 0.5
 
-    self.pred['frame2_mask'], self.pred['frame2_r'], self.pred['frame2_xyz'], self.pred['frame2_score'], self.pred['transl'], self.pred['rot'] = self.model(self.input['frame1_xyz'], self.input['frame1_rgb'], self.input['frame2_xyz'], self.input['frame2_rgb'], self.gt['cc'])
+    self.pred['cc'],\
+    self.pred['frame2_mask'], \
+      self.pred['frame2_r'], \
+      self.pred['frame2_xyz'], \
+      self.pred['frame2_score'], \
+      self.pred['transl'], \
+      self.pred['rot'] = self.model(self.input['frame1_xyz'], \
+                                    self.input['frame1_rgb'], \
+                                    self.input['frame2_xyz'], \
+                                    self.input['frame2_rgb'])#,\
+                                 #   self.gt['cc'])
 
     self.pred['frame2_mask_positive'] = tf.sigmoid(self.pred['frame2_mask'])[:,:,:,1]
 
@@ -114,6 +124,7 @@ class Experiment:
   
   def loss_op(self):
     #self.loss['rot'], self.loss['transl']#, self.loss['transl_variance'], self.loss['mask'], self.loss['score'], self.loss['elem'], self.loss['variance'], self.loss['boundary'], self.loss['violation'] = self.lossf(self.pred['xyz'], self.pred['r'], self.pred['mask'], self.pred['score'], self.pred['transl'], self.pred['rot'], self.gt['rot'], self.gt['transl'], self.gt['xyz'], self.gt['r'], self.gt['score'], batch_size=self.batch_size)
+    self.loss['cc'],\
     self.loss['flow'], \
     self.loss['rot'], \
     self.loss['transl'] = self.lossf(self.input['frame2_xyz'],\
@@ -124,13 +135,15 @@ class Experiment:
       self.pred['frame2_score'], \
       self.pred['transl'], \
       self.pred['rot'], \
+      self.pred['cc'],\
+      self.gt['cc'],\
       self.gt['rot'], \
       self.gt['transl'], \
       self.gt['frame2_xyz'], \
       self.gt['frame2_r'], \
       self.gt['frame2_score'], batch_size=self.batch_size)
 
-    self.cost = self.loss['flow']   + self.loss['transl'] * 100.0  +  self.loss['rot'] #+ self.loss['mask'] # + self.loss['elem'] * 100.0 + self.loss['boundary'] * 1000.0 + self.loss['score'] * 0.5 + self.loss['violation'] + self.loss['variance']
+    self.cost = self.loss['cc'] #self.loss['flow'] * 100.0  + self.loss['transl'] * 100.0  +  self.loss['rot'] #+ self.loss['mask'] # + self.loss['elem'] * 100.0 + self.loss['boundary'] * 1000.0 + self.loss['score'] * 0.5 + self.loss['violation'] + self.loss['variance']
 
   def build_framework(self,restore_epoch,train_val_test):
     if restore_epoch >= 0:
@@ -168,7 +181,7 @@ class Experiment:
       self.lossv[key] = None
 
   def loss_value_init(self):
-    self.loss_dict = {'flow':0.0, 'rot':0.0, 'transl_variance':0.0, 'transl':0.0, 'total_loss':0.0,'mask':0.0,'score':0.0,'elem':0.0,'variance':0.0,'boundary':0.0,'violation':0.0}
+    self.loss_dict = {'cc':0.0, 'flow':0.0, 'rot':0.0, 'transl_variance':0.0, 'transl':0.0, 'total_loss':0.0,'mask':0.0,'score':0.0,'elem':0.0,'variance':0.0,'boundary':0.0,'violation':0.0}
     self.log.init_keys(self.loss_dict.keys())
 
 
@@ -211,11 +224,12 @@ class Experiment:
 #        _ , self.lossv['rot'], self.lossv['transl_variance'], self.lossv['transl'], self.lossv['total_loss'], self.lossv['mask'], self.lossv['elem'], self.lossv['boundary'], self.lossv['variance'], self.lossv['violation'], self.lossv['score'] = self.sess.run([self.train_op, self.loss['rot'], self.loss['transl_variance'], self.loss['transl'], self.cost, self.loss['mask'], self.loss['elem'], self.loss['boundary'], self.loss['variance'], self.loss['violation'], self.loss['score']])
 #        self.loss_value_add({'rot':self.lossv['rot'],'transl_variance':self.lossv['transl_variance'],'transl':self.lossv['transl'],'total_loss':self.lossv['total_loss'],'mask':self.lossv['mask'],'elem':self.lossv['elem'],'boundary':self.lossv['boundary'], 'violation':self.lossv['violation'],'variance':self.lossv['variance'], 'score':self.lossv['score']}) 
         _ , self.lossv['total_loss'], \
+        self.lossv['cc'],\
         self.lossv['flow'], \
         self.lossv['rot'], \
         self.lossv['transl'] = self.sess.run([self.train_op, \
-          self.cost,self.loss['flow'],self.loss['rot'], self.loss['transl']])
-        self.loss_value_add({'flow':self.lossv['flow'] * 100.0, 'total_loss':self.lossv['total_loss'], 'rot':self.lossv['rot'], 'transl':self.lossv['transl']*100.0})
+          self.cost,self.loss['cc'],self.loss['flow'],self.loss['rot'], self.loss['transl']])
+        self.loss_value_add({'cc':self.lossv['cc'], 'flow':self.lossv['flow'] * 100.0, 'total_loss':self.lossv['total_loss'], 'rot':self.lossv['rot'], 'transl':self.lossv['transl']*100.0})
         #print('flow:%f rot:%f transl:%f' % (self.lossv['flow'],self.lossv['rot'], self.lossv['transl'])) 
         step += 1
         if step % self.num_batch == 0:
@@ -253,10 +267,10 @@ class Experiment:
     for ii in xrange(self.num_batch):
 #        self.lossv['transl_variance'], self.lossv['transl'], self.lossv['total_loss'], self.lossv['mask'], self.lossv['elem'], self.lossv['boundary'], self.lossv['variance'], self.lossv['violation'], self.lossv['score'] = self.sess.run([self.loss['transl_variance'], self.loss['transl'], self.cost, self.loss['mask'], self.loss['elem'], self.loss['boundary'], self.loss['variance'], self.loss['violation'], self.loss['score']])
 #        self.loss_value_add({'transl_variance':self.lossv['transl_variance'],'transl':self.lossv['transl'],'total_loss':self.lossv['total_loss'],'mask':self.lossv['mask'],'elem':self.lossv['elem'],'boundary':self.lossv['boundary'], 'violation':self.lossv['violation'],'variance':self.lossv['variance'], 'score':self.lossv['score']}) 
-        self.lossv['flow'], self.lossv['total_loss'], self.lossv['rot'], \
-        self.lossv['transl'] = self.sess.run([ self.loss['flow'], \
+        self.lossv['cc'], self.lossv['flow'], self.lossv['total_loss'], self.lossv['rot'], \
+        self.lossv['transl'] = self.sess.run([ self.loss['cc'], self.loss['flow'], \
           self.cost, self.loss['rot'], self.loss['transl']])
-        self.loss_value_add({'flow':self.lossv['flow'] * 100.0, 'total_loss':self.lossv['total_loss'],'rot':self.lossv['rot'],'transl':self.lossv['transl']*100.0})
+        self.loss_value_add({'cc':self.lossv['cc'], 'flow':self.lossv['flow'] * 100.0, 'total_loss':self.lossv['total_loss'],'rot':self.lossv['rot'],'transl':self.lossv['transl']*100.0})
  
 #       loss_value = self.sess.run([self.cost])
        #print('%f loss value' % loss_value_mask)
@@ -497,8 +511,8 @@ class Experiment:
     self.sess.close()
 
   def whole_process(self):
-    self.train(4)
-    best_epoch = self.validate(10,self.flags.num_epochs)
+    self.train()
+    best_epoch = self.validate(0,self.flags.num_epochs)
     self.log.log_plotting(['transl','rot','total_loss','flow'])
     #self.test(best_epoch)
     #best_epoch = 36#best_epoch #self.flags.num_epochs - 1
