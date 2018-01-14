@@ -9,11 +9,12 @@ import time
 import sys
 
 
-def loss(frame2_input_xyz, gt_frame1_pred_xyz, pred_xyz, pred_r, pred_mask, pred_score, pred_transl,pred_rot, gt_rot, gt_transl, gt_xyz, gt_r, gt_score, batch_size, dim=3, h=240, w=320): 
+def loss(frame2_input_xyz, gt_frame1_pred_xyz, pred_xyz, pred_r, pred_mask, pred_score, pred_transl,pred_rot,pred_cc,gt_cc_mask, gt_cc, gt_rot, gt_transl, gt_xyz, gt_r, gt_score, batch_size, dim=3, h=240, w=320): 
   obj_mask_origin = tf.greater(gt_xyz[:,:,:,2],tf.zeros_like(gt_xyz[:,:,:,2]))
   obj_mask_origin = tf.cast(obj_mask_origin,tf.float32)
   obj_mask_1  = tf.reshape(obj_mask_origin,[-1,h,w,1])
   obj_mask_dim = tf.tile(obj_mask_1,[1,1,1,dim])
+
   
   loss_mask = tf.reduce_mean( tf.nn.sparse_softmax_cross_entropy_with_logits(labels=tf.cast(obj_mask_origin,dtype=tf.int32),logits=pred_mask)) 
   score_weight = obj_mask_origin + 0.001
@@ -21,6 +22,9 @@ def loss(frame2_input_xyz, gt_frame1_pred_xyz, pred_xyz, pred_r, pred_mask, pred
   loss_score = tf.reduce_sum( (score_weight) * tf.nn.sparse_softmax_cross_entropy_with_logits(labels=tf.cast(gt_score,dtype=tf.int32), logits=pred_score)) / tf.reduce_sum(score_weight + 0.000001)
 
   loss_elem = tf.reduce_sum(tf.squared_difference(pred_xyz,gt_xyz)*obj_mask_dim)/tf.reduce_sum(obj_mask_1 + 0.000001)
+  loss_cc = tf.reduce_mean(gt_cc_mask * tf.squared_difference(pred_cc,gt_cc))
+  #pred_cc_mask = pred_cc * gt_cc_mask
+  #loss_cc = tf.losses.log_loss(labels=gt_cc,predictions=pred_cc) 
 
   loss_transl = tf.reduce_sum(obj_mask_dim * tf.squared_difference(pred_transl,gt_transl))/tf.reduce_sum(obj_mask_1 + 0.000001)
   loss_rot = tf.reduce_sum(obj_mask_dim * tf.squared_difference(pred_rot,gt_rot))/tf.reduce_sum(obj_mask_1 + 0.000001)
@@ -44,6 +48,7 @@ def loss(frame2_input_xyz, gt_frame1_pred_xyz, pred_xyz, pred_r, pred_mask, pred
  
     def flow_loss(z):
       idx_mask = tf.equal(gt_transl[b_i,:,:,2], ones * z)
+      #idx_mask = tf.logical_and(tf.equal(gt_transl[b_i,:,:,2], ones * z),tf.not_equal(gt_transl[b_i,:,:,2],tf.zeros_like(ones)))
       idx_mask = tf.reshape(idx_mask,[h,w,1]) 
       idx_mask = tf.cast(idx_mask,tf.float32)
       idx_mask = idx_mask * obj_mask_1[b_i]
@@ -160,4 +165,4 @@ def loss(frame2_input_xyz, gt_frame1_pred_xyz, pred_xyz, pred_r, pred_mask, pred
 
     #loss_violation += tf.reduce_mean(tf.map_fn(instance_violation_loss,y))
    
-    return loss_flow, loss_rot, loss_transl#, loss_variance_transl, loss_mask, loss_score, loss_elem, loss_variance, loss_boundary, loss_violation     
+    return loss_cc, loss_flow, loss_rot, loss_transl#, loss_variance_transl, loss_mask, loss_score, loss_elem, loss_variance, loss_boundary, loss_violation     
