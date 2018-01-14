@@ -2,7 +2,7 @@ import numpy as np
 import tensorflow as tf
 import tflearn
 import sys
-sys.path.append('/home/lins/interactive-segmentation/segNet2/src')
+sys.path.append('/home/linshaonju/interactive-segmentation/segNet2/src')
 from correlation import correlation
 
 from nets_factory import get_network

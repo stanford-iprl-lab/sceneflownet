@@ -19,17 +19,17 @@ def loss(frame2_input_xyz, gt_frame1_pred_xyz, pred_xyz, pred_r, pred_mask, pred
   loss_mask = tf.reduce_mean( tf.nn.sparse_softmax_cross_entropy_with_logits(labels=tf.cast(obj_mask_origin,dtype=tf.int32),logits=pred_mask)) 
   score_weight = obj_mask_origin + 0.001
   
-  loss_score = tf.reduce_sum( (score_weight) * tf.nn.sparse_softmax_cross_entropy_with_logits(labels=tf.cast(gt_score,dtype=tf.int32), logits=pred_score)) / tf.reduce_sum(score_weight + 0.000001)
+  loss_score = tf.reduce_sum( (score_weight) * tf.nn.sparse_softmax_cross_entropy_with_logits(labels=tf.cast(gt_score,dtype=tf.int32), logits=pred_score)) / (tf.reduce_sum(score_weight) + 0.000001)
 
-  loss_elem = tf.reduce_sum(tf.squared_difference(pred_xyz,gt_xyz)*obj_mask_dim)/tf.reduce_sum(obj_mask_1 + 0.000001)
-  loss_cc = tf.reduce_mean(gt_cc_mask * tf.squared_difference(pred_cc,gt_cc))
+  loss_elem = tf.reduce_sum(tf.squared_difference(pred_xyz,gt_xyz)*obj_mask_dim)/(tf.reduce_sum(obj_mask_1) + 0.000001)
+  loss_cc = tf.reduce_sum(gt_cc_mask * tf.squared_difference(pred_cc,gt_cc))/(tf.reduce_sum(gt_cc_mask)*441.0 + 0.000001)
   #pred_cc_mask = pred_cc * gt_cc_mask
   #loss_cc = tf.losses.log_loss(labels=gt_cc,predictions=pred_cc) 
 
-  loss_transl = tf.reduce_sum(obj_mask_dim * tf.squared_difference(pred_transl,gt_transl))/tf.reduce_sum(obj_mask_1 + 0.000001)
-  loss_rot = tf.reduce_sum(obj_mask_dim * tf.squared_difference(pred_rot,gt_rot))/tf.reduce_sum(obj_mask_1 + 0.000001)
+  loss_transl = tf.reduce_sum(obj_mask_dim * tf.squared_difference(pred_transl,gt_transl))/(tf.reduce_sum(obj_mask_1) + 0.000001)
+  loss_rot = tf.reduce_sum(obj_mask_dim * tf.squared_difference(pred_rot,gt_rot))/(tf.reduce_sum(obj_mask_1) + 0.000001)
 
-  loss_boundary = tf.reduce_sum(tf.squared_difference(gt_r, pred_r)*obj_mask_1 )/tf.reduce_sum(obj_mask_1 + 0.000001)
+  loss_boundary = tf.reduce_sum(tf.squared_difference(gt_r, pred_r)*obj_mask_1 )/(tf.reduce_sum(obj_mask_1) + 0.000001)
   loss_variance = 0.0
   loss_violation = 0.0
   loss_variance_transl = 0.0
