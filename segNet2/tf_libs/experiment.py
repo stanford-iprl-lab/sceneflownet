@@ -96,6 +96,9 @@ class Experiment:
                                     self.input['frame2_rgb'])#,\
                                  #   self.gt['cc'])
 
+    self.gt['mask_cc'] = tf.nn.max_pool(self.gt['frame2_xyz'][:,:,:,2:],ksize=[1,8,8,1],strides=[1,8,8,1],padding='VALID')
+    self.gt['mask_cc'] = tf.cast(self.gt['mask_cc'] > 0.0,tf.float32)
+    
     self.pred['frame2_mask_positive'] = tf.sigmoid(self.pred['frame2_mask'])[:,:,:,1]
 
     self.pred['frame2_mask_truncated'] = self.pred['frame2_mask_positive'] > 0.5
@@ -136,6 +139,7 @@ class Experiment:
       self.pred['transl'], \
       self.pred['rot'], \
       self.pred['cc'],\
+      self.gt['mask_cc'],\
       self.gt['cc'],\
       self.gt['rot'], \
       self.gt['transl'], \
@@ -143,7 +147,7 @@ class Experiment:
       self.gt['frame2_r'], \
       self.gt['frame2_score'], batch_size=self.batch_size)
 
-    self.cost = self.loss['cc'] #self.loss['flow'] * 100.0  + self.loss['transl'] * 100.0  +  self.loss['rot'] #+ self.loss['mask'] # + self.loss['elem'] * 100.0 + self.loss['boundary'] * 1000.0 + self.loss['score'] * 0.5 + self.loss['violation'] + self.loss['variance']
+    self.cost = self.loss['cc'] #* 1000.0 + self.loss['flow'] * 100.0  + self.loss['transl'] * 100.0  +  self.loss['rot'] #+ self.loss['mask'] # + self.loss['elem'] * 100.0 + self.loss['boundary'] * 1000.0 + self.loss['score'] * 0.5 + self.loss['violation'] + self.loss['variance']
 
   def build_framework(self,restore_epoch,train_val_test):
     if restore_epoch >= 0:
@@ -230,7 +234,7 @@ class Experiment:
         self.lossv['transl'] = self.sess.run([self.train_op, \
           self.cost,self.loss['cc'],self.loss['flow'],self.loss['rot'], self.loss['transl']])
         self.loss_value_add({'cc':self.lossv['cc'], 'flow':self.lossv['flow'] * 100.0, 'total_loss':self.lossv['total_loss'], 'rot':self.lossv['rot'], 'transl':self.lossv['transl']*100.0})
-        #print('flow:%f rot:%f transl:%f' % (self.lossv['flow'],self.lossv['rot'], self.lossv['transl'])) 
+        #print('cc:%f flow:%f rot:%f transl:%f' % (self.lossv['cc'], self.lossv['flow'],self.lossv['rot'], self.lossv['transl'])) 
         step += 1
         if step % self.num_batch == 0:
           self.loss_value_average()
@@ -415,9 +419,6 @@ class Experiment:
              
             pred_rot = self.predv['rot_masked'][0][frame2_model_id] 
             pred_rot = np.mean(pred_rot,axis=0)
-            print('pred_rot')
-            print(pred_rot)
-            print(np.linalg.norm(pred_rot))
 
             gt_rot = self.gtv['rot'][0][frame2_model_id] 
             gt_rot = np.mean(gt_rot,axis=0)
