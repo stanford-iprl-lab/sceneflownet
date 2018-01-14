@@ -41,7 +41,9 @@ def cnnmodel(frame1_xyz,frame1_rgb,frame2_xyz,frame2_rgb):
   cc_o = correlation(frame2_feat_rgb,frame1_feat_rgb,1,rad,1,1,rad)
   cc = tf.reshape(cc_o,[-1, 30*40, dia * dia, 1])
   
-  cc_relu = tf.nn.relu(cc)
+  cc = tf.stop_gradient(cc)
+ 
+  cc_relu = tf.nn.relu(tf.sign(cc-0.2))
 
   frame1_feat = tf.transpose(frame1_feat,[0,3,1,2]) 
   frame1_feat_padded = tf.pad(frame1_feat,paddings=[[0,0],[0,0],[rad,rad],[rad,rad]])
