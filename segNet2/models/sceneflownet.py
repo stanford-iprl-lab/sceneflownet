@@ -5,21 +5,8 @@ import sys
 sys.path.append('/home/lins/interactive-segmentation/segNet2/src')
 from correlation import correlation
 
-def encoder_rgb(x,reuse=False):
-  with tf.name_scope("model_rgb"):
-    x = tflearn.layers.conv.conv_2d(x,16,(3,3),strides=1,activation='relu',weight_decay=1e-5,regularizer='L2',reuse=reuse,scope="conv1_1_rgb")
-    x = tflearn.layers.conv.conv_2d(x,16,(3,3),strides=1,activation='relu',weight_decay=1e-5,regularizer='L2',reuse=reuse,scope="conv1_2_rgb")
-    x = tflearn.layers.conv.conv_2d(x,16,(3,3),strides=2,activation='relu',weight_decay=1e-5,regularizer='L2',reuse=reuse,scope="conv1_3_rgb")
-##120,160
-    x = tflearn.layers.conv.conv_2d(x,16,(3,3),strides=1,activation='relu',weight_decay=1e-5,regularizer='L2',reuse=reuse,scope="conv2_1_rgb")
-    x = tflearn.layers.conv.conv_2d(x,16,(3,3),strides=1,activation='relu',weight_decay=1e-5,regularizer='L2',reuse=reuse,scope="conv2_2_rgb")
-    x = tflearn.layers.conv.conv_2d(x,32,(3,3),strides=2,activation='relu',weight_decay=1e-5,regularizer='L2',reuse=reuse,scope="conv2_3_rgb")
-##60,80
-    x = tflearn.layers.conv.conv_2d(x,32,(3,3),strides=1,activation='relu',weight_decay=1e-5,regularizer='L2',reuse=reuse,scope="conv3_1_rgb")
-    x = tflearn.layers.conv.conv_2d(x,32,(3,3),strides=1,activation='relu',weight_decay=1e-5,regularizer='L2',reuse=reuse,scope="conv3_2_rgb")
-    x = tflearn.layers.conv.conv_2d(x,64,(3,3),strides=2,activation='relu',weight_decay=1e-5,regularizer='L2',reuse=reuse,scope="conv3_3_rgb")
-##30,40
-  return x
+from nets_factory import get_network
+import resnet_v1 as resnet_v1
 
 def encoder(x,reuse=False):
   with tf.name_scope("model_xyz"):
@@ -42,16 +29,18 @@ rad = 10
 dia = 2 * rad + 1
 
 def cnnmodel(frame1_xyz,frame1_rgb,frame2_xyz,frame2_rgb):
-  frame1_feat_rgb = encoder_rgb(frame1_rgb)
-  frame2_feat_rgb = encoder_rgb(frame2_rgb,reuse=True)
+  frame1_rgb = tf.image.resize_images(frame1_rgb,[480,640])
+  frame2_rgb = tf.image.resize_images(frame2_rgb,[480,640])
 
+  frame1_feat_rgb,_ = get_network('resnet50',frame1_rgb,weight_decay=1e-5, is_training=True)
+  frame2_feat_rgb,_ = get_network('resnet50',frame2_rgb,weight_decay=1e-5, is_training=True, reuse=True)
+
+  print("frame1_feat_rgb")
+  print(frame1_feat_rgb)
   frame1_feat = encoder(frame1_xyz)
   frame2_feat = encoder(frame2_xyz,reuse=True)
   
-  frame2_feat_rgb = tf.pad(frame2_feat_rgb,paddings=[[0,0],[1,1],[0,0],[0,0]])
-  frame1_feat_rgb = tf.pad(frame1_feat_rgb,paddings=[[0,0],[1,1],[0,0],[0,0]])
-
-  cc_o = correlation(frame2_feat_rgb,frame1_feat_rgb,1,rad,1,1,rad)[:,1:-1,:,:]
+  cc_o = correlation(frame2_feat_rgb,frame1_feat_rgb,1,rad,1,1,rad)
   cc = tf.reshape(cc_o,[-1, 30*40, dia * dia, 1])
   
   cc_relu = tf.nn.relu(cc)

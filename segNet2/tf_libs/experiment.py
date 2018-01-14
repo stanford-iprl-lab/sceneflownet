@@ -19,6 +19,8 @@ from mayavi import mlab as mayalab
 from matplotlib import pyplot as plt
 from preprocess.Loader import angleaxis_rotmatrix 
 
+from tf_libs.train_utils import get_var_list_to_restore
+
 class Experiment:
   def __init__(self,flags_para,inputf,model,lossf,log):
     self.flags = flags_para
@@ -56,8 +58,19 @@ class Experiment:
       new_saver.restore(self.sess,os.path.join(self.flags.model_save_dir,'-'+str(restore_epoch)))
     else:
       self.clean_model_save_dir()
-
-      
+      print("starting to get_var_list_to_restore")
+      vars_to_restore = get_var_list_to_restore()
+      for var in vars_to_restore:
+        print("restoring ", var.name)
+      checkpoint_path = '/home/lins/interactive-segmentation/Data/pretrained_models/resnet_v1_50.ckpt'
+      try:
+        restorer = tf.train.Saver(vars_to_restore) 
+        restorer.restore(self.sess, checkpoint_path)
+        print('Restored %d(%d) vars from %s' %( len(vars_to_restore), len(tf.global_variables()), checkpoint_path))
+      except:
+        print('Checking your params %s' %(checkpoint_path))
+        raise
+  
   def build_model(self, tfrecords_filename, num_epochs):
     dim = 3
 
@@ -81,8 +94,8 @@ class Experiment:
     self.gt['cc'],\
     self.instance_id = self.inputf(batch_size = self.batch_size, num_epochs = num_epochs, tfrecords_filename = tfrecords_filename)
     print(self.gt['cc'].shape)
-    self.input['frame1_rgb'] = self.input['frame1_rgb'] / 255.0 - 0.5
-    self.input['frame2_rgb'] = self.input['frame2_rgb'] / 255.0 - 0.5
+    #self.input['frame1_rgb'] = self.input['frame1_rgb'] / 255.0 - 0.5
+    #self.input['frame2_rgb'] = self.input['frame2_rgb'] / 255.0 - 0.5
 
     self.pred['cc'],\
     self.pred['frame2_mask'], \
