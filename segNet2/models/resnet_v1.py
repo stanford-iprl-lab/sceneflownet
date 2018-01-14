@@ -191,23 +191,12 @@ def resnet_v1(inputs,
             if output_stride % 4 != 0:
               raise ValueError('The output_stride needs to be a multiple of 4.')
             output_stride /= 4
-          print("input")
-          print(net)
           net = resnet_utils.conv2d_same(net, 64, 7, stride=2, scope='conv1')
-          print("after conv1")
-          print(net)
           net = slim.max_pool2d(net, [3, 3], stride=2, scope='pool1')
-          print("after pool1")
-          print(net)
         net = resnet_utils.stack_blocks_dense(net, blocks, output_stride)
-        print("after stack blocks net")
-        print(net)
-        print(global_pool)
         if global_pool:
           # Global average pooling.
           net = tf.reduce_mean(net, [1, 2], name='pool5', keep_dims=True)
-          print("after global pool")
-          print(net)
 
         if num_classes is not None:
           net = slim.conv2d(net, num_classes, [1, 1], activation_fn=None,
@@ -218,8 +207,6 @@ def resnet_v1(inputs,
         end_points = slim.utils.convert_collection_to_dict(end_points_collection)
         if num_classes is not None:
           end_points['predictions'] = slim.softmax(logits, scope='predictions')
-        print("final net")
-        print(net)
         return net, end_points
 resnet_v1.default_image_size = 224
 
