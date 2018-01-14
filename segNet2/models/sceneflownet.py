@@ -35,8 +35,6 @@ def cnnmodel(frame1_xyz,frame1_rgb,frame2_xyz,frame2_rgb):
   frame1_feat_rgb,_ = get_network('resnet50',frame1_rgb,weight_decay=1e-5, is_training=True)
   frame2_feat_rgb,_ = get_network('resnet50',frame2_rgb,weight_decay=1e-5, is_training=True, reuse=True)
 
-  print("frame1_feat_rgb")
-  print(frame1_feat_rgb)
   frame1_feat = encoder(frame1_xyz)
   frame2_feat = encoder(frame2_xyz,reuse=True)
   
