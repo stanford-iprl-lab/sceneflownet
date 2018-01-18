@@ -68,14 +68,14 @@ class Experiment:
       vars_to_restore = get_var_list_to_restore()
       for var in vars_to_restore:
         print("restoring %s" % var.name) 
-      checkpoint_path = '/home/linshaonju/interactive-segmentation/segNet2/saved_models/cc/-15'
+      checkpoint_path = '/home/linshaonju/interactive-segmentation/segNet2/saved_models/cc/-30'
       restorer = tf.train.Saver(vars_to_restore)
       restorer.restore(self.sess, checkpoint_path)     
  
       vars_to_restore_1 = get_var_list_to_restore_by_name('encode,decode')
-      checkpoint_path_1 = '/home/linshaonju/interactive-segmentation/segNet2/saved_models/ub/-14'
-      restorer = tf.train.Saver(vars_to_restore_1)
-      restorer.restore(self.sess, checkpoint_path_1) 
+      checkpoint_path_1 = '/home/linshaonju/interactive-segmentation/segNet2/saved_models/ub/-20'
+      #restorer = tf.train.Saver(vars_to_restore_1)
+      #restorer.restore(self.sess, checkpoint_path_1) 
       for var in vars_to_restore_1:
         print("restoring %s" % var.name)
  
@@ -155,7 +155,7 @@ class Experiment:
       self.gt['rot'], \
       self.gt['transl'], self.gt['frame2_xyz'], batch_size=self.batch_size)
 
-    self.cost = self.loss['cc'] + self.loss['flow'] * 100  + self.loss['transl'] * 200  +  self.loss['rot']#+ self.loss['mask'] # + self.loss['elem'] * 100.0 + self.loss['boundary'] * 1000.0 + self.loss['score'] * 0.5 + self.loss['violation'] + self.loss['variance']
+    self.cost = self.loss['cc'] + self.loss['flow'] * 500  + self.loss['transl'] * 200  +  self.loss['rot']#+ self.loss['mask'] # + self.loss['elem'] * 100.0 + self.loss['boundary'] * 1000.0 + self.loss['score'] * 0.5 + self.loss['violation'] + self.loss['variance']
 
   def build_framework(self,restore_epoch,train_val_test):
     if restore_epoch >= 0:
@@ -524,8 +524,8 @@ class Experiment:
 
 
   def whole_process(self):
-    self.train()
-    best_epoch = self.validate(15,self.flags.num_epochs)
+    #self.train(28)
+    best_epoch = self.validate(38,self.flags.num_epochs)
     #self.log.log_plotting(['transl','rot','total_loss','flow'])
     #self.test(best_epoch)
     #best_epoch = 36#best_epoch #self.flags.num_epochs - 1
