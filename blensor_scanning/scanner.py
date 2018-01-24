@@ -27,8 +27,10 @@ import shutil
 model_path_lists = []
 model_ids = modelids.split('#')[:-1]
 model_sizes = {}
+model_id_list = []
 for idx,line in enumerate(model_ids):
   cate, model_id, model_size = line.split('_')
+  model_id_list.append(cate+'_'+model_id)
   model_size = float(model_size)
   model_path_lists.append(os.path.join(model_top_dir,cate,model_id,'model.obj'))
   if idx == 0:
@@ -39,6 +41,7 @@ for idx,line in enumerate(model_ids):
 print(model_sizes)
 print(len(model_sizes))
 print(len(model_path_lists))
+print(model_id_list)
 
 if not os.path.exists(outImagePath):
   os.mkdir(outImagePath)
@@ -100,7 +103,7 @@ bpy.data.objects['Cube.001'].location = (0,0,-1000)
 view_params = []
 for i in range(1):
   tilt_deg = np.random.uniform(-1,1) #np.random.normal(0, 4)
-  dist = np.random.uniform(0.4, 0.8) 
+  dist = np.random.uniform(0.25, 0.8) 
   elevation_deg = np.random.uniform(20.0, 90.0)
   azimuth_deg = (i) * 30.0 + np.random.uniform(-15,15)
   if azimuth_deg < 0:
@@ -177,7 +180,8 @@ for idx,modelid in enumerate(model_ids):
     name_id = '{num:03d}'.format(num=idx)
     model_name = 'model.'+name_id
     ob = bpy.data.objects[model_name]
-  fname = os.path.join(outImagePath,'frame%d_'+modelid+'_matrix_wolrd.txt') % frame_mid
+  fname = os.path.join(outImagePath,'frame%d_'+model_id_list[idx]+'_matrix_wolrd.txt') % frame_mid
+  print(fname)
   f = open(fname, "w" )
   f.write( str( ob.matrix_world ) )
   f.close()
@@ -200,7 +204,8 @@ for idx,modelid in enumerate(model_ids):
     name_id = '{num:03d}'.format(num=idx)
     model_name = 'model.'+name_id
     ob = bpy.data.objects[model_name]
-  fname = os.path.join(outImagePath,'frame%d_'+modelid+'_matrix_wolrd.txt') % (scene.frame_end)
+  fname = os.path.join(outImagePath,'frame%d_'+model_id_list[idx]+'_matrix_wolrd.txt') % (scene.frame_end)
+  print(fname)
   f = open(fname, "w" )
   f.write( str( ob.matrix_world ) )
   f.close()
