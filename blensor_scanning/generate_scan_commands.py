@@ -3,7 +3,7 @@ import sys
 import os
 from local_variables import *
 
-command_file = open('scanning_commands.txt','w')
+command_file = open('commands.txt','w')
 mesh_top_dir = '/home/linshaonju/GraspNet3.0/Data/ShapenetManifold'
 cates = [line for line in os.listdir(mesh_top_dir) if os.path.isdir(os.path.join(mesh_top_dir,line))]
 
@@ -70,76 +70,77 @@ cates = ['02876657',\
          ]
 ### the origin CAD model bbox diagonal has length of 1
  
-cates_sizes = [[0.1,0.27],\
+cates_sizes = {'02876657':[0.1,0.27],\
          # bottle 
-         [0.1,0.27],\
+         '02691156':[0.1,0.27],\
          # toy airplane 
-         '02747177',\
+         '02747177':[0.3,0.5],\
          # trash can
-         '02773838',\
+         '02773838':[0.3,0.4],\
          # bag 
-         '02808440',\
+         '02808440':[0.2,0.35],\
          # bowl
-         [0.1,0.25],\
+         '02924116':[0.1,0.25],\
          #toy bus
-         [0.1,0.23],\
+         '02942699':[0.1,0.23],\
          #camera
-         '02946921',\
+         '02946921':[0.12,0.15],\
          #can
-         '02954340',\
+         '02954340':[0.25,0.35],\
          # cap
-         [0.1,0.25],\
+         '02958343':[0.1,0.25],\
          #toy car
-         [0.1,0.20],\
+         '03001627':[0.1,0.20],\
          #chair
-         '03046257',\
+         '03046257':[0.1,0.2],\
          #clocks
-         '03085013',\
+         '03085013':[0.3,0.5],\
          #key boards
-         '03211117',\
+         '03211117':[0.5,0.7],\
          #display
-         '03261776',\
+         '03261776':[0.2,0.3],\
          #earphone
-         '03624134',\
+         '03624134':[0.1,0.2],\
          #knife
-         '03642806',\
+         '03642806':[0.3,0.5],\
          #laptop
-         [0.15,0.23],\
+         '03790512':[0.15,0.23],\
          #toy motorcycle
-         '03797390',\
+         '03797390':[0.13,0.17],\
          #mug
-         [0.12,0.20],\
+         '03948459':[0.12,0.20],\
          #pistol
-         '04074963',\
+         '04074963':[0.13,0.20],\
          #remote control
-         '04401088',\
+         '04401088':[0.13,0.17],\
          #telephone
-         [0.1,0.3],\
+         '04530566':[0.1,0.3],\
          #toy boat
-         [0.07,0.17],\
+         '04468005':[0.07,0.17],\
          #toy train
-         [0.08,0.23],\
+         '04099429':[0.08,0.23],\
          #toy rocket
-         [0.1,0.20],\
+         '04256520':[0.1,0.20],\
          #sofa
-         '03513137',\
+         '03513137':[0.3,0.4],\
          #helmet
-         [0.08,0.2],\
+         '04379243':[0.08,0.2],\
          #table
-         ]
-
-
+         }
 
 model_ids_per_cate = {}
 model_ids = []
 max_num = 4882
+model_sizes = []
 for cate in cates:
   models = [line for line in os.listdir(os.path.join(mesh_top_dir,cate)) if cate+' '+line in train_id]
   model_ids_per_cate[cate] = models
   print(len(models))
   inds = np.random.choice(len(models),max_num)
+  low_size,high_size = cates_sizes[cate]
+  model_size = np.random.uniform(low=low_size,high=high_size,size=max_num)
   for model_id in inds:
-    model_ids.append(cate+'_'+models[model_id])
+    model_ids.append(cate+'_'+models[model_id]+'_'+str(model_size[model_id]))
 
 print(len(model_ids))
 
@@ -147,7 +148,7 @@ count = 0
 res_top = scan_result_dir
 
 max_num_instances = 30
-num_pairs = 40
+num_pairs = 2
 
 instances_in_pairs = np.random.choice(len(model_ids),max_num_instances * num_pairs)
 instances_in_pairs = np.array(instances_in_pairs).reshape((num_pairs,max_num_instances))
@@ -156,7 +157,7 @@ print(instances_in_pairs.shape)
 
 
 for i in xrange(num_pairs):
-  num_instances = np.random.randint(15,max_num_instances)
+  num_instances = np.random.randint(1,max_num_instances)
   #inds = np.random.choice(len(model_ids),num_instances)
   inds = instances_in_pairs[i][0:num_instances]
   print(inds)
@@ -168,7 +169,7 @@ for i in xrange(num_pairs):
     os.mkdir(model_scan_path)
   blender = os.path.join(ROOT_DIR,'3rd_parties','blensor','blender')
   blank_blend = os.path.join(ROOT_DIR,'blensor_scanning','blank.blend')
-  scan_file = os.path.join(ROOT_DIR,'blensor_scanning','scan_model_2frame.py')
+  scan_file = os.path.join(ROOT_DIR,'blensor_scanning','scanner.py')
   command = '%s %s --background --python %s %s %s' % (blender, blank_blend, scan_file, tmp, model_scan_path)
   command_file.write(command+'\n')
 
