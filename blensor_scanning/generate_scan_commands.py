@@ -148,7 +148,7 @@ count = 0
 res_top = scan_result_dir
 
 max_num_instances = 30
-num_pairs = 2
+num_pairs = 40000
 
 instances_in_pairs = np.random.choice(len(model_ids),max_num_instances * num_pairs)
 instances_in_pairs = np.array(instances_in_pairs).reshape((num_pairs,max_num_instances))
