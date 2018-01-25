@@ -182,6 +182,6 @@ class Seg_Label:
     np.savez(self.graspmap_model_id_para_savepath,labeling=self.labeling_model_id)
 
 graspmap_top_dir = sys.argv[-1]
-test = Seg_Label(graspmap_top_dir=graspmap_top_dir, obj_top_dir='/home/linshaonju/GraspNet3.0/Data/ShapenetManifold')  
+test = Seg_Label(graspmap_top_dir=graspmap_top_dir, obj_top_dir='/home/linshaonju/interactive-segmentation/Data/ShapenetManifold')  
 test.label_frame('20') 
 test.label_frame('80')
