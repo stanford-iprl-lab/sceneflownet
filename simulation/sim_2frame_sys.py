@@ -144,14 +144,14 @@ class Seg_Label:
     #print(tmp_inn.shape)
     #print('test')
     tmp_inn = (np.linalg.norm(self.grasp_xyz - self.grasp_xyz[0],axis=1) > 0.0001)
-    inddd = (self.grasp_xyz[:,2] > -0.2 + 0.0001) * (np.linalg.norm(self.grasp_xyz - self.grasp_xyz[0],axis=1) > 0.0001)
+    inddd = (self.grasp_xyz[:,2] > -0.2 + 0.001) * (np.linalg.norm(self.grasp_xyz - self.grasp_xyz[0],axis=1) > 0.001)
     foreground_inds = np.where(inddd)[0]
     
     print(len(foreground_inds))
     self.objs = []
     self.obj_trans = np.zeros((self.num_objs,3,))
     self.obj_rots = np.zeros((self.num_objs,3,3))
-    self.num_samples = 20000
+    self.num_samples = 60000
     self.obj_points = np.zeros((self.num_objs,self.num_samples,3))
     for idx,cate_models in enumerate(self.model_ids):
       cate, model = cate_models.split('_matrix')[0].split('_')[1:]
@@ -169,7 +169,10 @@ class Seg_Label:
         self.labeling_model_id[foreground_inds[obj_inds]] = idx + 1
         foreground_inds = foreground_inds[left_inds]
         print(len(foreground_inds))
-    
+
+    #self.labeling_model_id[foreground_inds] = 100
+    print("finally ") 
+    print(len(foreground_inds))   
     self.labeling = self.labeling.reshape((self.height,self.width,3))
     self.graspmap_para_savepath = os.path.join(graspmap_top_dir,'frame'+frame_id+'_labeling.npz')
     np.savez(self.graspmap_para_savepath,labeling=self.labeling)
@@ -179,6 +182,6 @@ class Seg_Label:
     np.savez(self.graspmap_model_id_para_savepath,labeling=self.labeling_model_id)
 
 graspmap_top_dir = sys.argv[-1]
-test = Seg_Label(graspmap_top_dir=graspmap_top_dir, obj_top_dir='/home/linshaonju/interactive-segmentation/Data/ShapenetManifold')  
+test = Seg_Label(graspmap_top_dir=graspmap_top_dir, obj_top_dir='/home/linshaonju/GraspNet3.0/Data/ShapenetManifold')  
 test.label_frame('20') 
 test.label_frame('80')
