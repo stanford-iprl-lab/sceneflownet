@@ -1,13 +1,14 @@
 import numpy as np
 import scipy.ndimage
 import math
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 from utils import *
 from math import *
 import os
 from scipy.ndimage import imread
 from mayavi import mlab as mayalab
 import skimage.measure
+from multiprocessing import Pool
 
 np.set_printoptions(precision=4,suppress=True,linewidth=300)
 
@@ -155,6 +156,7 @@ def load_transformation(top_dir):
     frame1_pid = frame1_pid.reshape((240,320))
     if instance_id > 0: 
       if instance_id in frame1_id_list:
+        print(model_ids[int(instance_id)-1])
         frame2_tran, frame2_rot = tran_rot(os.path.join(top_dir,'frame80_'+model_ids[int(instance_id)-1]))             
         frame1_tran, frame1_rot = tran_rot(os.path.join(top_dir,'frame20_'+model_ids[int(instance_id)-1]))
         frame2_vector = frame2_rot[:,1]
@@ -186,7 +188,7 @@ def load_transformation(top_dir):
       angle_axis = rotmatrix_angleaxis(rot)
       #rot = angleaxis_rotmatrix(angle_axis)
 
-      if 1:#int(instance_id) == 1:
+      if 0:#int(instance_id) == 1:
         frame2_pid = frame2_id == instance_id
         frame2_pid = frame2_pid.reshape((240,320))
         frame2_pid_xyz = frame2_xyz[frame2_pid]
@@ -340,13 +342,13 @@ def cal_cc(frame1_id_file,frame2_id_file,cc_file, rad=10):
               if frame1_tmp[i_idx,j_idx] == frame2_tmp[i,j]:
                 cc_value[i,j,ch] = 1.0
           
-  if 1:
+  if 0:   
     plt.figure(0)
     plt.imshow(frame1_tmp)
     plt.figure(1)
     plt.imshow(frame2_tmp)
     plt.figure(2)
-    plt.imshow(cc_value[:,:,220])
+    plt.imshow(cc_value[:,:,221])
     plt.show()
 
   np.savez(cc_file,cc=cc_value)
@@ -380,3 +382,4 @@ if __name__ == '__main__':
   #  frame1_id_file = load_labeling(os.path.join(top_d,'frame20_labeling_model_id.npz'))
   #  frame2_id_file = load_labeling(os.path.join(top_d,'frame80_labeling_model_id.npz'))
   #  cal_cc(frame1_id_file, frame2_id_file, cc_file)
+
