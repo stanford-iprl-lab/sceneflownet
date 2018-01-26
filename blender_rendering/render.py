@@ -53,10 +53,10 @@ specular_intensity = np.random.uniform(0,0.5,1)
 color = makeMaterial('color',diffuse,diffuse_intensity,specular,specular_intensity,1)
 bpy.ops.mesh.primitive_cube_add(location=(0,0,0),radius=1)
 bpy.data.objects['Cube'].location=(0,0,-0.2)
-bpy.data.objects['Cube'].scale = (1,1,0.0001)
+bpy.data.objects['Cube'].scale = (10,10,0.0001)
 bpy.data.objects['Cube'].name = 'floor'
 
-setMaterial(bpy.data.objects['floor'],color)
+#setMaterial(bpy.data.objects['floor'],color)
 texturepath = os.path.expanduser(texture_path)
 
 def texture(texturepath,obj_bpy):
@@ -82,7 +82,7 @@ def texture(texturepath,obj_bpy):
   me = obj_bpy.data
   me.materials.append(mat)
 
-#texture(texturepath,bpy.data.objects['floor'])
+texture(texturepath,bpy.data.objects['floor'])
 
 frame_id = '20'
 model_path_list, transl_list, rot_list = model_para_list(result_path,frame_id)
