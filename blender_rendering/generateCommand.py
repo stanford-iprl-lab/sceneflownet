@@ -6,11 +6,11 @@ from local_variables import *
 
 command_file = open('commands.txt','w')
 
-mesh_top_dir = '/home/linshaonju/GraspNet3.0/Data/ShapenetManifold'
+mesh_top_dir = '/home/linshaonju/interactive-segmentation/Data/ShapenetManifold'
 
 top_dir = '/home/linshaonju/interactive-segmentation/Data/BlensorResult'
 
-texture_path_top_dir = '/home/linshaonju/GraspNet3.0/Data/SUN397'
+texture_path_top_dir = '/home/linshaonju/interactive-segmentation/Data/SUN397'
 
 texture_path_list = []
 alpha_dir = [line for line in os.listdir(texture_path_top_dir) if os.path.isdir(os.path.join(texture_path_top_dir,line))]
@@ -24,7 +24,7 @@ for a_dir in alpha_dir:
       texture_path_list.append(os.path.join(texture_sub_sub_dir,line))
 print(len(texture_path_list))
 
-for i in xrange(3,4):
+for i in xrange(25000,25000+10):
   result_path = os.path.join(top_dir,str(i)) 
   blender = os.path.join(ROOT_DIR,'3rd_parties','blensor','blender')
   blank_blend = os.path.join(ROOT_DIR,'blensor_scanning','blank.blend')

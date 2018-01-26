@@ -35,7 +35,7 @@ def tran_rot(filepath):
   return tran,rot
 
 def model_para_list(top_dir,frame_id):
-  model_top_dir = '/home/linshaonju/GraspNet3.0/Data/ShapeNetCore'  
+  model_top_dir = '/home/linshaonju/interactive-segmentation/Data/ShapeNetCore'  
   model_list = [line.strip().split('_') for line in os.listdir(top_dir) if line.startswith('frame'+frame_id) and line.endswith('_matrix_wolrd.txt')]
   print("model_list")
   print(model_list)
