@@ -4,7 +4,7 @@ import os
 from local_variables import *
 
 command_file = open('commands.txt','w')
-mesh_top_dir = '/home/linshaonju/GraspNet3.0/Data/ShapenetManifold'
+mesh_top_dir = '/home/linshaonju/interactive-segmentation/Data/ShapenetManifold'
 cates = [line for line in os.listdir(mesh_top_dir) if os.path.isdir(os.path.join(mesh_top_dir,line))]
 
 train_id = [line.strip() for line in open('/home/linshaonju/new_trainid_md5.txt')] 
@@ -130,10 +130,10 @@ cates_sizes = {'02876657':[0.1,0.27],\
 
 model_ids_per_cate = {}
 model_ids = []
-max_num = 4882
+max_num = 1567 #train4882
 model_sizes = []
 for cate in cates:
-  models = [line for line in os.listdir(os.path.join(mesh_top_dir,cate)) if cate+' '+line in train_id]
+  models = [line for line in os.listdir(os.path.join(mesh_top_dir,cate)) if cate+' '+line in test_id]
   model_ids_per_cate[cate] = models
   print(len(models))
   inds = np.random.choice(len(models),max_num)
@@ -148,7 +148,7 @@ count = 0
 res_top = scan_result_dir
 
 max_num_instances = 30
-num_pairs = 40000
+num_pairs = 8500
 
 instances_in_pairs = np.random.choice(len(model_ids),max_num_instances * num_pairs)
 instances_in_pairs = np.array(instances_in_pairs).reshape((num_pairs,max_num_instances))
@@ -156,11 +156,10 @@ instances_in_pairs = np.array(instances_in_pairs).reshape((num_pairs,max_num_ins
 print(instances_in_pairs.shape)
 
 
-for i in xrange(num_pairs):
+for i in xrange(0,1700):
   num_instances = np.random.randint(1,max_num_instances)
   #inds = np.random.choice(len(model_ids),num_instances)
   inds = instances_in_pairs[i][0:num_instances]
-  print(inds)
   tmp = ''
   for ids in inds:
     tmp += model_ids[ids] + '#'
