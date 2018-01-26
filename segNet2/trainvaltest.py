@@ -9,13 +9,12 @@ import time
 import sys
 import argparse
 import shutil
-import matplotlib.pyplot as plt
 
 from local_variables import *
 
 sys.path.append(BASE_DIR)
 
-from models.cc import cnnmodel
+from models.sceneflownet_max_1 import cnnmodel
 
 seed = 42
 np.random.seed(seed)
@@ -26,7 +25,7 @@ from tf_libs.tfrecords import inputs
 from evaluation.metric import IoU
 from lossf.cc_loss import loss
 from inference.infer import nms,infer_seg
-experiment_name = 'cc'
+experiment_name = 'sceneflownet_max_1'
 
 MODEL_SAVE_DIR = os.path.join(BASE_DIR,'saved_models')
 RESULT_SAVE_DIR = os.path.join(BASE_DIR,'saved_results')
@@ -52,11 +51,10 @@ parser.add_argument('--result_save_dir',default=os.path.join(RESULT_SAVE_DIR,exp
 FLAGS = parser.parse_args()
 dim = 3
 
-from tf_libs.cc_experiment import Experiment
+from tf_libs.sceneflownet_experiment import Experiment
 
 if not os.path.exists(FLAGS.log_dir):
   os.mkdir(FLAGS.log_dir)
-
 
 log = LOG(FLAGS.log_dir,'log.txt')
 
