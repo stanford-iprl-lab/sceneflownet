@@ -1,12 +1,14 @@
 import numpy as np
 import scipy.ndimage
 import math
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 from utils import *
 from math import *
 import os
 from scipy.ndimage import imread
 from mayavi import mlab as mayalab
+import skimage.measure
+from multiprocessing import Pool
 
 np.set_printoptions(precision=4,suppress=True,linewidth=300)
 
@@ -184,7 +186,7 @@ def load_transformation(top_dir):
       angle_axis = rotmatrix_angleaxis(rot)
       #rot = angleaxis_rotmatrix(angle_axis)
 
-      if 1:#int(instance_id) == 1:
+      if 0:#int(instance_id) == 1:
         frame2_pid = frame2_id == instance_id
         frame2_pid = frame2_pid.reshape((240,320))
         frame2_pid_xyz = frame2_xyz[frame2_pid]
@@ -301,7 +303,7 @@ def load_predicted_frame1_feat(frame2_input_xyz, frame2_gt_xyz, transformation_f
   frame1_id_unique = np.unique(frame1_id)
   pred_frame1_xyz = np.zeros((h,w,3)) 
   for frame_id in frame2_id_unique:
-    if frame_id > 0 and frame_id in frame1_id_unique:
+    if frame_id > 0:# and frame_id in frame1_id_unique:
        model_id = frame2_id == frame_id
        transl_model = np.mean(transl[model_id],axis=0)
        rot_model = np.mean(rot[model_id],axis=0)
@@ -314,24 +316,67 @@ def load_predicted_frame1_feat(frame2_input_xyz, frame2_gt_xyz, transformation_f
        pred_frame1_xyz[model_id] = pred_frame1_model
   return pred_frame1_xyz
  
+def load_cc(cc_file):
+  tmp = np.load(cc_file)['cc']
+  return tmp
+
+def cal_cc(frame1_id_file,frame2_id_file,cc_file, rad=10):
+  frame1_id = np.squeeze(frame1_id_file)
+  frame2_id = np.squeeze(frame2_id_file)
+  frame1_tmp = skimage.measure.block_reduce(frame1_id, (8,8), np.max)
+  frame2_tmp = skimage.measure.block_reduce(frame2_id,(8,8), np.max)
+
+  dia = rad * 2 + 1
+  cc_value = np.zeros((30,40,dia ** 2))
+  for i in xrange(30):
+    for j in xrange(40):
+      if frame2_tmp[i,j] > 0:
+        for i_shift in xrange(-rad,rad+1):
+          for j_shift in xrange(-rad,rad+1):
+            i_idx = i + i_shift
+            j_idx = j + j_shift
+            if i_idx >= 0 and i_idx < 30 and j_idx >= 0 and j_idx < 40:
+              ch = (i_shift + rad) * dia + (j_shift+rad)
+              if frame1_tmp[i_idx,j_idx] == frame2_tmp[i,j]:
+                cc_value[i,j,ch] = 1.0
+
+  if 0:
+    plt.figure(0)
+    plt.imshow(frame1_tmp)
+    plt.figure(1)
+    plt.imshow(frame2_tmp)
+    plt.figure(2)
+    plt.imshow(cc_value[:,:,221])
+    plt.show()
+
+  np.savez(cc_file,cc=cc_value)
+
+def raw_cal_cc(filepath):
+  frame1_id_file,frame2_id_file,cc_file = filepath.split('#')
+  frame1_id = load_labeling(frame1_id_file)
+  frame2_id = load_labeling(frame2_id_file)
+  cal_cc(frame1_id, frame2_id, cc_file)
+  return 'good'
 
 if __name__ == '__main__':
-  top_dir = '/home/lins/interactive-segmentation/Data/BlensorResult_2frame/3'
-  transl, rot = load_transformation('/home/lins/interactive-segmentation/Data/BlensorResult_2frame/3')
-  frame2_input_xyz_file = [line for line in os.listdir(top_dir) if line.endswith('pgm') and line.startswith('frame80')][0]
-  frame1_input_xyz_file = [line for line in os.listdir(top_dir) if line.endswith('pgm') and line.startswith('frame20')][0]
-  frame2_input_xyz = load_xyz(os.path.join(top_dir,frame2_input_xyz_file))
-  frame1_input_xyz = load_xyz(os.path.join(top_dir,frame1_input_xyz_file))
-  plt.figure(0)
-  plt.imshow(frame2_input_xyz[:,:,2]) 
-  plt.figure(1)
-  plt.imshow(frame1_input_xyz[:,:,2])
-  frame2_gt_xyz = load_seg(os.path.join(top_dir,'frame80_labeling.npz'))
-  frame1_id_file = load_labeling(os.path.join(top_dir,'frame20_labeling_model_id.npz'))
-  frame2_id_file = load_labeling(os.path.join(top_dir,'frame80_labeling_model_id.npz')) 
-  plt.figure(2)
-  plt.imshow(frame1_id_file[:,:,0])
-  plt.figure(3)
-  plt.imshow(frame2_id_file[:,:,0])
-  plt.show()
-  load_predicted_frame1_feat(frame2_input_xyz,frame2_gt_xyz, (transl, rot), frame1_id_file,frame2_id_file) 
+  filelist = []
+  top_dir = '/home/linshaonju/interactive-segmentation/Data/BlensorResult_train/'
+  for i in xrange(5000,30000):
+    top_d = os.path.join(top_dir,str(i))
+    cc_file = os.path.join(top_d,'cc.npz')
+    frame1_id_file = os.path.join(top_d,'frame20_labeling_model_id.npz')
+    frame2_id_file = os.path.join(top_d,'frame80_labeling_model_id.npz')
+    total = frame1_id_file + '#' + frame2_id_file + '#' + cc_file
+    if os.path.exists(frame1_id_file) and os.path.exists(frame2_id_file):
+      filelist.append(total)
+      print(total)
+    #frame1_id_file = load_labeling(os.path.join(top_d,'frame20_labeling_model_id.npz'))
+    #frame2_id_file = load_labeling(os.path.join(top_d,'frame80_labeling_model_id.npz'))
+    #cal_cc(frame1_id_file, frame2_id_file, cc_file)
+ 
+  pool = Pool(100)
+  for i, data in enumerate(pool.imap(raw_cal_cc,filelist)):
+     print(i)
+ 
+  pool.close()
+  pool.join()
