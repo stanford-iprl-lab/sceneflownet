@@ -156,7 +156,7 @@ instances_in_pairs = np.array(instances_in_pairs).reshape((num_pairs,max_num_ins
 print(instances_in_pairs.shape)
 
 
-for i in xrange(0,1700):
+for i in xrange(num_pairs):
   num_instances = np.random.randint(1,max_num_instances)
   #inds = np.random.choice(len(model_ids),num_instances)
   inds = instances_in_pairs[i][0:num_instances]
@@ -170,6 +170,7 @@ for i in xrange(0,1700):
   blank_blend = os.path.join(ROOT_DIR,'blensor_scanning','blank.blend')
   scan_file = os.path.join(ROOT_DIR,'blensor_scanning','scanner.py')
   command = '%s %s --background --python %s %s %s' % (blender, blank_blend, scan_file, tmp, model_scan_path)
-  command_file.write(command+'\n')
+  if i < 3400 and i >= 1700:
+    command_file.write(command+'\n')
 
 command_file.close() 

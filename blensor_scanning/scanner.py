@@ -17,7 +17,7 @@ import blensor
 from random import uniform
 
 """---------- main -----------"""
-model_top_dir = '/home/linshaonju/GraspNet3.0/Data/ShapenetManifold'
+model_top_dir = '/home/linshaonju/interactive-segmentation/Data/ShapenetManifold'
 outImagePath = sys.argv[-1]
 modelids = sys.argv[-2]
 
