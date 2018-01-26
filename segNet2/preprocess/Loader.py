@@ -167,10 +167,11 @@ def load_transformation(top_dir):
         angle_axis = angle * Raxis
         rot = angleaxis_rotmatrix(angle_axis)
         rot = R.T.dot(rot.dot(R))
-        #R12 = frame1_rot.dot(np.linalg.inv(frame2_rot))
-        #rot = R.T.dot(R12.dot(R))
-        #tran = R.T.dot(frame1_tran-C) + R.T.dot(R12.dot(C-frame2_tran))
-        if 1:
+        R12 = frame1_rot.dot(np.linalg.inv(frame2_rot))
+        rot = R.T.dot(R12.dot(R))
+        tran = R.T.dot(frame1_tran-C) + R.T.dot(R12.dot(C-frame2_tran))
+  
+        if 0:
           tran = -frame2_tran + frame1_tran
           tran = R.T.dot(tran)
         tran[2] *= -1.0
@@ -185,7 +186,7 @@ def load_transformation(top_dir):
       angle_axis = rotmatrix_angleaxis(rot)
       #rot = angleaxis_rotmatrix(angle_axis)
 
-      if 0:#int(instance_id) == 1:
+      if 1:#int(instance_id) == 1:
         frame2_pid = frame2_id == instance_id
         frame2_pid = frame2_pid.reshape((240,320))
         frame2_pid_xyz = frame2_xyz[frame2_pid]
@@ -193,10 +194,10 @@ def load_transformation(top_dir):
         frame1_pid = frame1_pid.reshape((240,320))
         frame1_pid_xyz = frame1_xyz[frame1_pid]
         frame1_center_pid = frame1_center[frame1_pid]
-        #frame21_xyz = rot.dot(frame2_pid_xyz.T).T + tran
-        frame21_xyz = frame2_pid_xyz + tran - frame1_center_pid[0,:]
-        frame1_pid_xyz -= frame1_center_pid
-        frame21_xyz = rot.dot(frame21_xyz.T).T
+        frame21_xyz = rot.dot(frame2_pid_xyz.T).T + tran
+        #frame21_xyz = frame2_pid_xyz + tran - frame1_center_pid[0,:]
+        #frame1_pid_xyz -= frame1_center_pid
+        #frame21_xyz = rot.dot(frame21_xyz.T).T
         mayalab.points3d(frame21_xyz[:,0],frame21_xyz[:,1],frame21_xyz[:,2],mode='sphere')
         mayalab.points3d(frame1_pid_xyz[:,0],frame1_pid_xyz[:,1],frame1_pid_xyz[:,2],color=(1,0,0),mode='sphere')
         mayalab.show()
