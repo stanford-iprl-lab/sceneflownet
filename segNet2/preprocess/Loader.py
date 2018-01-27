@@ -102,7 +102,16 @@ def angleaxis_rotmatrix(angleaxis):
   rot[2,2] = axis[2] ** 2 * v + c
   return rot
 
-def load_transformation(top_dir):
+def lood_transformation(top_dir):
+  transl_file = [line for line in os.listdir(top_dir) if line.endswith('_transl.npz')][0]
+  rot_file = [line for line in os.listdir(top_dir) if line.endswith('_rot.npz')][0]
+  transl_file = os.path.join(top_dir,transl_file)
+  rot_file = os.path.join(top_dir,rot_file)
+  transl = np.load(transl_file)['transl']
+  rot = np.load(rot_file)['rot']
+  return transl, rot
+
+def cal_transformation(top_dir):
   pgm_filepath = [line for line in os.listdir(top_dir) if line.endswith('.pgm') and line.startswith('frame80')][0]
   
   tmp = pgm_filepath.split('.pgm')[0].split('_')
@@ -361,22 +370,27 @@ def raw_cal_cc(filepath):
 if __name__ == '__main__':
   filelist = []
   top_dir = '/home/linshaonju/interactive-segmentation/Data/BlensorResult_train/'
-  for i in xrange(5000,30000):
-    top_d = os.path.join(top_dir,str(i))
-    cc_file = os.path.join(top_d,'cc.npz')
-    frame1_id_file = os.path.join(top_d,'frame20_labeling_model_id.npz')
-    frame2_id_file = os.path.join(top_d,'frame80_labeling_model_id.npz')
-    total = frame1_id_file + '#' + frame2_id_file + '#' + cc_file
-    if os.path.exists(frame1_id_file) and os.path.exists(frame2_id_file):
-      filelist.append(total)
-      print(total)
-    #frame1_id_file = load_labeling(os.path.join(top_d,'frame20_labeling_model_id.npz'))
-    #frame2_id_file = load_labeling(os.path.join(top_d,'frame80_labeling_model_id.npz'))
-    #cal_cc(frame1_id_file, frame2_id_file, cc_file)
+  
+  cc_flag = True
+  if cc_flag:
+    for i in xrange(5000,30000):
+      top_d = os.path.join(top_dir,str(i))
+      cc_file = os.path.join(top_d,'cc.npz')
+      frame1_id_file = os.path.join(top_d,'frame20_labeling_model_id.npz')
+      frame2_id_file = os.path.join(top_d,'frame80_labeling_model_id.npz')
+      total = frame1_id_file + '#' + frame2_id_file + '#' + cc_file
+      if os.path.exists(frame1_id_file) and os.path.exists(frame2_id_file):
+        filelist.append(total)
+        print(total)
  
-  pool = Pool(100)
-  for i, data in enumerate(pool.imap(raw_cal_cc,filelist)):
-     print(i)
+    pool = Pool(100)
+    for i, data in enumerate(pool.imap(raw_cal_cc,filelist)):
+      print(i)
  
-  pool.close()
-  pool.join()
+    pool.close()
+    pool.join()
+ 
+  else:
+    for i in xrange(5000,30000):
+      top_d = os.path.join(top_dir,str(i))
+       
