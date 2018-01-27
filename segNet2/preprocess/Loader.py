@@ -213,7 +213,12 @@ def cal_transformation(top_dir):
 
       transformation_translation[frame2_pid] = tran
       transformation_rot[frame2_pid] = angle_axis #rot.reshape((9))
-  return transformation_translation, transformation_rot
+  transformation_file = os.path.join(top_dir,'translation.npz')
+  rotation_file = os.path.join(top_dir,'rotation.npz')
+  np.savez(transformation_file,transl=transformation_translation)
+  np.savez(rotation_file,rot=transformation_rot)
+  return "good"
+  #return transformation_translation, transformation_rot
 
 
 def load_seg(filepath):
@@ -373,7 +378,7 @@ if __name__ == '__main__':
   
   cc_flag = True
   if cc_flag:
-    for i in xrange(5000,30000):
+    for i in xrange(0,5000):
       top_d = os.path.join(top_dir,str(i))
       cc_file = os.path.join(top_d,'cc.npz')
       frame1_id_file = os.path.join(top_d,'frame20_labeling_model_id.npz')
@@ -389,8 +394,4 @@ if __name__ == '__main__':
  
     pool.close()
     pool.join()
- 
-  else:
-    for i in xrange(5000,30000):
-      top_d = os.path.join(top_dir,str(i))
-       
+        
