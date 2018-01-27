@@ -15,7 +15,6 @@ np.set_printoptions(precision=4,suppress=True,linewidth=300)
 h = 240
 w = 320
 
-
 def quaternion_matrix(quaternion):
     """Return homogeneous rotation matrix from quaternion.
     >>> M = quaternion_matrix([0.99810947, 0.06146124, 0, 0])
@@ -102,7 +101,29 @@ def angleaxis_rotmatrix(angleaxis):
   rot[2,2] = axis[2] ** 2 * v + c
   return rot
 
-def load_transformation(top_dir):
+cate_axis = ['02876657',\
+             #bottle
+            '02747177',\
+             #trash can
+            '02808440',\
+             #bowl
+            '02946921',\
+             #can
+             '04099429',\
+             #toy rocket
+             ]
+
+def lood_transformation(top_dir):
+  transl_file = [line for line in os.listdir(top_dir) if line.endswith('_transl.npz')][0]
+  rot_file = [line for line in os.listdir(top_dir) if line.endswith('_rot.npz')][0]
+  transl_file = os.path.join(top_dir,transl_file)
+  rot_file = os.path.join(top_dir,rot_file)
+  transl = np.load(transl_file)['transl'] 
+  rot = np.load(rot_file)['rot']
+  return transl, rot
+
+
+def cal_transformation(top_dir):
   pgm_filepath = [line for line in os.listdir(top_dir) if line.endswith('.pgm') and line.startswith('frame80')][0]
   
   tmp = pgm_filepath.split('.pgm')[0].split('_')
@@ -149,6 +170,8 @@ def load_transformation(top_dir):
   transformation_rot = np.zeros((h,w,3))
   transformation_translation = np.zeros((h,w,3))
 
+  symmetry_top_dir = '/home/lins/symmetry'
+
   for instance_id in frame2_id_list:
     frame2_pid = frame2_id == instance_id
     frame2_pid = frame2_pid.reshape((240,320))
@@ -156,26 +179,35 @@ def load_transformation(top_dir):
     frame1_pid = frame1_pid.reshape((240,320))
     if instance_id > 0: 
       if instance_id in frame1_id_list:
-        print(model_ids[int(instance_id)-1])
         frame2_tran, frame2_rot = tran_rot(os.path.join(top_dir,'frame80_'+model_ids[int(instance_id)-1]))             
         frame1_tran, frame1_rot = tran_rot(os.path.join(top_dir,'frame20_'+model_ids[int(instance_id)-1]))
-        frame2_vector = frame2_rot[:,1]
-        frame1_vector = frame1_rot[:,1]
-        frame2_vector /= (np.linalg.norm(frame2_vector)+0.000001)
-        frame1_vector /= (np.linalg.norm(frame1_vector)+0.000001)
-        Raxis = np.cross(frame2_vector,frame1_vector)
-        Raxis = Raxis / (np.linalg.norm(Raxis) + 0.000001)
-        angle = np.arccos(np.dot(frame2_vector,frame1_vector))
-        angle_axis = angle * Raxis
-        rot = angleaxis_rotmatrix(angle_axis)
-        rot = R.T.dot(rot.dot(R))
-        R12 = frame1_rot.dot(np.linalg.inv(frame2_rot))
-        rot = R.T.dot(R12.dot(R))
-        tran = R.T.dot(frame1_tran-C) + R.T.dot(R12.dot(C-frame2_tran))
+        print(model_ids[int(instance_id)-1])
+        cate_id, md5 = model_ids[int(instance_id)-1].split('_')[0:2]
+        symmetry_file = os.path.join(symmetry_top_dir,cate_id,md5+'.generator') 
+        symmetry_lines = []
+        if os.path.exists(symmetry_file):
+          symmetry_lines = [line for line in open(symmetry_file) if line.startswith('C')] 
+          print(symmetry_lines)       
+        if cate_id in cate_axis and len(symmetry_lines) > 0:
+          frame2_vector = frame2_rot[:,1]
+          frame1_vector = frame1_rot[:,1]
+          frame2_vector /= (np.linalg.norm(frame2_vector)+0.000001)
+          frame1_vector /= (np.linalg.norm(frame1_vector)+0.000001)
+          Raxis = np.cross(frame2_vector,frame1_vector)
+          Raxis = Raxis / (np.linalg.norm(Raxis) + 0.000001)
+          angle = np.arccos(np.dot(frame2_vector,frame1_vector))
+          angle_axis = angle * Raxis
+          R12 = angleaxis_rotmatrix(angle_axis)
+          rot = R.T.dot(R12.dot(R)) 
+          tran = R.T.dot(frame1_tran-C) + R.T.dot(R12.dot(C-frame2_tran))
+        else:
+          frame2_tran, frame2_rot = tran_rot(os.path.join(top_dir,'frame80_'+model_ids[int(instance_id)-1]))             
+          frame1_tran, frame1_rot = tran_rot(os.path.join(top_dir,'frame20_'+model_ids[int(instance_id)-1]))
+          R12 = frame1_rot.dot(np.linalg.inv(frame2_rot))
+          rot = R.T.dot(R12.dot(R))
+          tran = R.T.dot(frame1_tran-C) + R.T.dot(R12.dot(C-frame2_tran))
   
-        if 0:
-          tran = -frame2_tran + frame1_tran
-          tran = R.T.dot(tran)
+
         tran[2] *= -1.0
         rot[0,2] *= -1.0 
         rot[1,2] *= -1.0
@@ -186,8 +218,8 @@ def load_transformation(top_dir):
         rot = np.identity(3)
     
       angle_axis = rotmatrix_angleaxis(rot)
-      #rot = angleaxis_rotmatrix(angle_axis)
-
+        
+          
       if 0:#int(instance_id) == 1:
         frame2_pid = frame2_id == instance_id
         frame2_pid = frame2_pid.reshape((240,320))
@@ -197,9 +229,6 @@ def load_transformation(top_dir):
         frame1_pid_xyz = frame1_xyz[frame1_pid]
         frame1_center_pid = frame1_center[frame1_pid]
         frame21_xyz = rot.dot(frame2_pid_xyz.T).T + tran
-        #frame21_xyz = frame2_pid_xyz + tran - frame1_center_pid[0,:]
-        #frame1_pid_xyz -= frame1_center_pid
-        #frame21_xyz = rot.dot(frame21_xyz.T).T
         mayalab.points3d(frame21_xyz[:,0],frame21_xyz[:,1],frame21_xyz[:,2],mode='sphere')
         mayalab.points3d(frame1_pid_xyz[:,0],frame1_pid_xyz[:,1],frame1_pid_xyz[:,2],color=(1,0,0),mode='sphere')
         mayalab.show()
@@ -235,7 +264,6 @@ def load_r(filepath):
        dist = np.min(np.array([np.linalg.norm(idx_c[i_c] - idx_c[i]) for i in d2_list if i != i_c]))
        dist_image[seg[:,:,2] == idx_c[i_c][2]] = dist / 10
    return dist_image
-
 
 
 def load_xyz(filename):
@@ -355,8 +383,8 @@ def cal_cc(frame1_id_file,frame2_id_file,cc_file, rad=10):
 
 
 if __name__ == '__main__':
-  top_dir = '/home/lins/interactive-segmentation/Data/BlensorResult_2frame/3'
-  transl, rot = load_transformation('/home/lins/interactive-segmentation/Data/BlensorResult_2frame/3')
+  top_dir = '/home/lins/interactive-segmentation/Data/BlensorResult_2frame/22'
+  transl, rot = cal_transformation(top_dir)
   frame2_input_xyz_file = [line for line in os.listdir(top_dir) if line.endswith('pgm') and line.startswith('frame80')][0]
   frame1_input_xyz_file = [line for line in os.listdir(top_dir) if line.endswith('pgm') and line.startswith('frame20')][0]
   frame2_input_xyz = load_xyz(os.path.join(top_dir,frame2_input_xyz_file))
@@ -383,3 +411,40 @@ if __name__ == '__main__':
   #  frame2_id_file = load_labeling(os.path.join(top_d,'frame80_labeling_model_id.npz'))
   #  cal_cc(frame1_id_file, frame2_id_file, cc_file)
 
+  if 0:
+    filelist = []
+    top_dir = '/home/linshaonju/interactive-segmentation/Data/BlensorResult_train/'
+    for i in xrange(5000,30000):
+      top_d = os.path.join(top_dir,str(i))
+      cc_file = os.path.join(top_d,'cc.npz')
+      frame1_id_file = os.path.join(top_d,'frame20_labeling_model_id.npz')
+      frame2_id_file = os.path.join(top_d,'frame80_labeling_model_id.npz')
+      total = frame1_id_file + '#' + frame2_id_file + '#' + cc_file
+      if os.path.exists(frame1_id_file) and os.path.exists(frame2_id_file):
+        filelist.append(total)
+        print(total)
+    #frame1_id_file = load_labeling(os.path.join(top_d,'frame20_labeling_model_id.npz'))
+    #frame2_id_file = load_labeling(os.path.join(top_d,'frame80_labeling_model_id.npz'))
+    #cal_cc(frame1_id_file, frame2_id_file, cc_file)
+
+    pool = Pool(100)
+    for i, data in enumerate(pool.imap(raw_cal_cc,filelist)):
+      print(i)
+
+    pool.close()
+    pool.join()
+
+  if 1:
+    filelist = []
+    top_dir = '/home/linshaonju/interactive-segmentation/Data/BlensorResult_test/'
+    for i in xrange(5000,6000):
+      top_d = os.path.join(top_dir,str(i))
+      filelist.append(top_d)
+
+    pool = Pool(100)
+    for i, data in enumerate(pool.imap(cal_transformation,filelist)):
+      print(i)
+
+    pool.close()
+    pool.join()
+              
