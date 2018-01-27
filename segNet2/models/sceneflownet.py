@@ -108,7 +108,6 @@ def cnnmodel(frame1_xyz,frame1_rgb,frame2_xyz,frame2_rgb):
  
   #cc = tf.stop_gradient(cc)
   cc_relu = tf.nn.relu(tf.sign(cc))  
-
   frame1_feat = tf.transpose(frame1_feat,[0,3,1,2]) 
   frame1_feat_padded = tf.pad(frame1_feat,paddings=[[0,0],[0,0],[rad,rad],[rad,rad]])
   frame1_list = []
