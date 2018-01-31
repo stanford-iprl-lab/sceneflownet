@@ -596,20 +596,22 @@ def cal_boundary(top_dir):
    if not os.path.exists(filepath):
      return
    seg = load_seg(filepath)
-   feat = np.zeros((240,320,6))
+   feat = np.zeros((240,320,9))
    feat[:,:,0:3] = seg
-   seg_tmp = seg
-   seg_tmp_ = np.reshape(seg_tmp,(-1,3))
-   seg_uni = np.unique(seg_tmp_,axis=0)
-   for i in xrange(len(seg_uni)):
-     inds = feat[:,:,0:3] == seg_uni[i]
-     rot_tmp = rot[inds].reshape(-1,3)
-     rot_mat = angleaxis_rotmatrix(rot_tmp[0])
-     transl_tmp = transl[inds].reshape(-1,3)[0]
-     seg_single = seg[inds]
-     seg_single = seg_single.reshape(-1,3)[0]
-     new_xyz = rot_mat.dot(seg_single) + transl_tmp
-     feat[:,:,3:6][seg[:,:,2] == seg_single[2]] = new_xyz
+   #seg_tmp = seg
+   #seg_tmp_ = np.reshape(seg_tmp,(-1,3))
+   #seg_uni = np.unique(seg_tmp_,axis=0)
+   #for i in xrange(len(seg_uni)):
+   #  inds = feat[:,:,0:3] == seg_uni[i]
+   #  rot_tmp = rot[inds].reshape(-1,3)
+   #  rot_mat = angleaxis_rotmatrix(rot_tmp[0])
+   #  transl_tmp = transl[inds].reshape(-1,3)[0]
+   #  seg_single = seg[inds]
+   #  seg_single = seg_single.reshape(-1,3)[0]
+   #  new_xyz = rot_mat.dot(seg_single) + transl_tmp
+   #  feat[:,:,3:6][seg[:,:,2] == seg_single[2]] = new_xyz
+   feat[:,:,3:6] = seg + transl
+   feat[:,:,6:9] = seg + rot
 
    d2_image = np.reshape(feat,(-1,9))
    idx_c = np.unique(d2_image,axis=0)
