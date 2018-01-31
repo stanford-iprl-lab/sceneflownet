@@ -620,11 +620,11 @@ def load_boundary(boundary_file):
 
 if __name__ == '__main__':
   filelist = []
-  top_dir = '/home/linshaonju/interactive-segmentation/Data/BlensorResult_train/'
+  top_dir = '/home/linshaonju/interactive-segmentation/Data/BlensorResult_val/'
   
-  cc_flag = False
+  cc_flag = True
   if cc_flag:
-    for i in xrange(2000,4000):
+    for i in xrange(0,4000):
       top_d = os.path.join(top_dir,str(i))
       cc_file = os.path.join(top_d,'cc.npz')
       frame1_id_file = os.path.join(top_d,'frame20_labeling_model_id.npz')
@@ -642,9 +642,9 @@ if __name__ == '__main__':
     pool.join()
 
 
-  if 1:
+  if 0:
     filelist = []
-    for i in xrange(0,30000):
+    for i in xrange(0,8500):
       top_d = os.path.join(top_dir,str(i))
       transfile = os.path.join(top_d,'translation.npz')
       if os.path.exists(top_d):
@@ -658,8 +658,8 @@ if __name__ == '__main__':
     pool.close()
     pool.join()   
 
-  if 1:
-    for i in xrange(0,30000):
+  if 0:
+    for i in xrange(0,8500):
       top_d = os.path.join(top_dir,str(i))
       if os.path.exists(top_d):
         frame1_id_file = os.path.join(top_d,'frame20_labeling_model_id.npz')
@@ -700,9 +700,9 @@ if __name__ == '__main__':
     pool.close()
     pool.join()
 
-  if 1:
+  if 0:
     filelist = []
-    for i in xrange(0,30000):
+    for i in xrange(0,8500):
       top_d = os.path.join(top_dir,str(i))
       if os.path.exists(top_d):
         if not os.path.exists(os.path.join(top_d,"translation.npz")):
