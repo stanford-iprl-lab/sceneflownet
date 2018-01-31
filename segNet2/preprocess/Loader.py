@@ -595,11 +595,22 @@ def cal_boundary(top_dir):
    filepath = os.path.join(top_dir,'frame80_labeling.npz')
    if not os.path.exists(filepath):
      return
-   seg = np.load(filepath)['labeling']
-   feat = np.zeros((240,320,9))
+   seg = load_seg(filepath)
+   feat = np.zeros((240,320,6))
    feat[:,:,0:3] = seg
-   feat[:,:,3:6] = transl + seg
-   feat[:,:,6:9] = rot + seg
+   seg_tmp = seg
+   seg_tmp_ = np.reshape(seg_tmp,(-1,3))
+   seg_uni = np.unique(seg_tmp_,axis=0)
+   for i in xrange(len(seg_uni)):
+     inds = feat[:,:,0:3] == seg_uni[i]
+     rot_tmp = rot[inds].reshape(-1,3)
+     rot_mat = angleaxis_rotmatrix(rot_tmp[0])
+     transl_tmp = transl[inds].reshape(-1,3)[0]
+     seg_single = seg[inds]
+     seg_single = seg_single.reshape(-1,3)[0]
+     new_xyz = rot_mat.dot(seg_single) + transl_tmp
+     feat[:,:,3:6][seg[:,:,2] == seg_single[2]] = new_xyz
+
    d2_image = np.reshape(feat,(-1,9))
    idx_c = np.unique(d2_image,axis=0)
    idx_c = [idx_c[i] for i in xrange(len(idx_c)) if idx_c[i][0] != 0.0 and idx_c[i][1] != 0.0 and idx_c[i][2] != 0.0]
@@ -620,9 +631,9 @@ def load_boundary(boundary_file):
 
 if __name__ == '__main__':
   filelist = []
-  top_dir = '/home/linshaonju/interactive-segmentation/Data/BlensorResult_val/'
+  top_dir = '/home/linshaonju/interactive-segmentation/Data/BlensorResult_train/'
   
-  cc_flag = True
+  cc_flag = False
   if cc_flag:
     for i in xrange(0,4000):
       top_d = os.path.join(top_dir,str(i))
@@ -700,9 +711,9 @@ if __name__ == '__main__':
     pool.close()
     pool.join()
 
-  if 0:
+  if 1:
     filelist = []
-    for i in xrange(0,8500):
+    for i in xrange(0,30000):
       top_d = os.path.join(top_dir,str(i))
       if os.path.exists(top_d):
         if not os.path.exists(os.path.join(top_d,"translation.npz")):
