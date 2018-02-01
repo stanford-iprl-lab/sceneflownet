@@ -92,23 +92,18 @@ rad = 10
 dia = 2 * rad + 1
 
 def cnnmodel(frame1_xyz,frame1_rgb,frame2_xyz,frame2_rgb):
-  frame1_rgb = tf.image.resize_images(frame1_rgb,[480,640])
-  frame2_rgb = tf.image.resize_images(frame2_rgb,[480,640])
-
   frame1_feat_rgb,_ = get_network('resnet50',frame1_rgb,weight_decay=1e-5, is_training=True)
   frame2_feat_rgb,_ = get_network('resnet50',frame2_rgb,weight_decay=1e-5, is_training=True, reuse=True)
 
-  frame1_feat = encoder(frame1_xyz)
+  print(frame1_feat_rgb)
+  frame1_feat_o = encoder(frame1_xyz)
   frame2_feat = encoder(frame2_xyz,reuse=True)
   
   cc_o = correlation(frame2_feat_rgb,frame1_feat_rgb,1,rad,1,1,rad)
   cc = tf.reshape(cc_o,[-1, 30*40, dia * dia, 1]) 
+  cc_relu = tf.nn.relu(cc)
 
-  cc_max = tf.nn.max_pool(cc,ksize=[1, 1, dia * dia,1],strides=[1, 1, dia * dia,1],padding='VALID')
- 
-  #cc = tf.stop_gradient(cc)
-  cc_relu = tf.nn.relu(tf.sign(cc))  
-  frame1_feat = tf.transpose(frame1_feat,[0,3,1,2]) 
+  frame1_feat = tf.transpose(frame1_feat_o,[0,3,1,2]) 
   frame1_feat_padded = tf.pad(frame1_feat,paddings=[[0,0],[0,0],[rad,rad],[rad,rad]])
   frame1_list = []
   for i in xrange(30):
@@ -118,16 +113,24 @@ def cnnmodel(frame1_xyz,frame1_rgb,frame2_xyz,frame2_rgb):
       frame1_list.append(tmp) 
   frame1_list = tf.stack(frame1_list,axis=2)
   frame1_list = tf.transpose(frame1_list,[0,2,3,1])
-  
+  print(cc_relu) 
+  print(frame1_list) 
+
   frame1_list = frame1_list * cc_relu
   
   frame1_list = tf.nn.max_pool(frame1_list,ksize=[1,1,dia * dia,1],strides=[1,1,dia * dia,1],padding='VALID')
   frame1_list = tf.reshape(frame1_list,(-1,30,40,64))
-  
-  x = tf.concat([frame2_feat,frame1_list],3)
+
+  x = tf.concat([frame2_feat,frame1_feat_o,frame1_list],3)
 
   x_s = decoder(x)
   x_transl = tflearn.layers.conv.conv_2d(x_s,3,(3,3),strides=1,activation='linear',weight_decay=1e-3,regularizer='L2')
   x_rot = tflearn.layers.conv.conv_2d(x_s,3,(3,3),strides=1,activation='linear',weight_decay=1e-3,regularizer='L2')
+  x_center = tflearn.layers.conv.conv_2d(x_s,3,(3,3),strides=1,activation='linear',weight_decay=1e-3,regularizer='L2')
+  x_score = tflearn.layers.conv.conv_2d(x_s,2,(3,3),strides=1,activation='linear',weight_decay=1e-3,regularizer='L2')
+  x_mask = tflearn.layers.conv.conv_2d(x_s,2,(3,3),strides=1,activation='linear',weight_decay=1e-3,regularizer='L2')
+  x_boundary = tflearn.layers.conv.conv_2d(x_s,2,(3,3),strides=1,activation='linear',weight_decay=1e-3,regularizer='L2')
 
-  return cc_o, x_transl, x_rot
+  x_center = tf.add(x_center,frame2_xyz)
+
+  return x_transl, x_rot, x_center, x_mask, x_score, x_boundary
