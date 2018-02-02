@@ -325,7 +325,6 @@ def cal_transformation(top_dir):
   
   frame2_id_list = np.unique(frame2_id)
   frame1_id_list = np.unique(frame1_id)
-  #print(top_dir) 
 
   if 0:
     plt.figure(0)
@@ -347,6 +346,7 @@ def cal_transformation(top_dir):
     frame2_pid = frame2_pid.reshape((240,320))
     frame1_pid = frame1_id == instance_id
     frame1_pid = frame1_pid.reshape((240,320))
+
     if instance_id > 0: 
       if instance_id in frame1_id_list:
         frame2_tran, frame2_rot = tran_rot(os.path.join(top_dir,'frame80_'+model_ids[int(instance_id)-1]))             
@@ -364,13 +364,13 @@ def cal_transformation(top_dir):
             line_tmp = line.strip().split()
             c_types = int(line_tmp[1])
             c_vectors = np.array([float(line_tmp[2]),float(line_tmp[3]),float(line_tmp[4])])
+            c_vectors = c_vectors.reshape((3,0))
+            tmp = c_vectors.dot(np.array(c_vectors_list).T)
+            print(tmp.shape)
             c_types_list.append(c_types)
             c_vectors_list.append(c_vectors)
-
  
         if cate_id in cate_axis and md5 not in cate_except[cate_id] and len(symmetry_lines) > 0:
-          print(model_ids[int(instance_id)-1])
-          print(symmetry_lines)       
           frame2_tran, frame2_rot = tran_rot(os.path.join(top_dir,'frame80_'+model_ids[int(instance_id)-1]))             
           frame1_tran, frame1_rot = tran_rot(os.path.join(top_dir,'frame20_'+model_ids[int(instance_id)-1]))
           R12 = frame1_rot.dot(np.linalg.inv(frame2_rot))
@@ -391,21 +391,11 @@ def cal_transformation(top_dir):
               if abs(current_angle) > c_interval / 2:
                 angle_diff = math.floor(current_angle / c_interval) 
                 angle_axis = angle_axis - angle_diff * c_vector
-
-          #frame2_vector = frame2_rot[:,1]
-          #frame1_vector = frame1_rot[:,1]
-          #frame2_vector /= (np.linalg.norm(frame2_vector)+0.000001)
-          #frame1_vector /= (np.linalg.norm(frame1_vector)+0.000001)
-          #Raxis = np.cross(frame2_vector,frame1_vector)
-          #Raxis = Raxis / (np.linalg.norm(Raxis) + 0.000001)
-          #angle = np.arccos(np.dot(frame2_vector,frame1_vector))
-          #angle_axis = angle * Raxis
           R12 = angleaxis_rotmatrix(angle_axis)
           rot = R.T.dot(R12.dot(R)) 
           tran = R.T.dot(frame1_tran-C) + R.T.dot(R12.dot(C-frame2_tran))
         else:
-          frame2_tran, frame2_rot = tran_rot(os.path.join(top_dir,'frame80_'+model_ids[int(instance_id)-1]))             
-          frame1_tran, frame1_rot = tran_rot(os.path.join(top_dir,'frame20_'+model_ids[int(instance_id)-1]))
+          frame2_tran, frame2_rot = tran_rot(os.path.join(top_dir,'frame80_'+model_ids[int(instance_id)-1]))                      frame1_tran, frame1_rot = tran_rot(os.path.join(top_dir,'frame20_'+model_ids[int(instance_id)-1]))
           R12 = frame1_rot.dot(np.linalg.inv(frame2_rot))
           rot = R.T.dot(R12.dot(R))
           tran = R.T.dot(frame1_tran-C) + R.T.dot(R12.dot(C-frame2_tran))
@@ -420,17 +410,13 @@ def cal_transformation(top_dir):
         rot = np.identity(3)
     
       angle_axis = rotmatrix_angleaxis(rot)
-        
           
       transformation_translation[frame2_pid] = tran
       transformation_rot[frame2_pid] = angle_axis #rot.reshape((9))
   transformation_file = os.path.join(top_dir,'translation.npz')
   rotation_file = os.path.join(top_dir,'rotation.npz')
-  print(transformation_file)
-  print(rotation_file)
-  np.savez(transformation_file,transl=transformation_translation)
-  np.savez(rotation_file,rot=transformation_rot)
-  print("finish")
+  #np.savez(transformation_file,transl=transformation_translation)
+  #np.savez(rotation_file,rot=transformation_rot)
   return "good"
 
 
@@ -542,7 +528,7 @@ def cal_predicted_frame1_feat(top_dir,frame2_input_xyz_file, transformation_file
   pred_frame1_xyz = np.zeros((h,w,3)) 
   frame2_input_xyz = load_xyz(frame2_input_xyz_file)
   for frame_id in frame2_id_unique:
-    if frame_id > 0:# and frame_id in frame1_id_unique:
+    if frame_id > 0:
        model_id = frame2_id == frame_id
        transl_model = np.mean(transl[model_id],axis=0)
        rot_model = np.mean(rot[model_id],axis=0)
@@ -550,7 +536,6 @@ def cal_predicted_frame1_feat(top_dir,frame2_input_xyz_file, transformation_file
        pred_frame1_model = frame2_input_xyz[model_id]
        pred_frame1_model = rot_matrix.dot(pred_frame1_model.T).T + transl_model
        pred_frame1_xyz[model_id] = pred_frame1_model
-  #return pred_frame1_xyz
   pred_frame1_xyz_file = os.path.join(top_dir,'pred_frame1_xyz.npz')
   np.savez(pred_frame1_xyz_file,flow=pred_frame1_xyz)
 
@@ -655,9 +640,9 @@ if __name__ == '__main__':
     pool.join()
 
 
-  if 0:
+  if 1:
     filelist = []
-    for i in xrange(0,8500):
+    for i in xrange(0,30000):
       top_d = os.path.join(top_dir,str(i))
       transfile = os.path.join(top_d,'translation.npz')
       if os.path.exists(top_d):
@@ -713,9 +698,9 @@ if __name__ == '__main__':
     pool.close()
     pool.join()
 
-  if 1:
+  if 0:
     filelist = []
-    for i in xrange(0,30000):
+    for i in xrange(0,8500):
       top_d = os.path.join(top_dir,str(i))
       if os.path.exists(top_d):
         if not os.path.exists(os.path.join(top_d,"translation.npz")):
@@ -724,7 +709,7 @@ if __name__ == '__main__':
           filelist.append(top_d)
   
  
-    pool = Pool(200)
+    pool = Pool(100)
     for i, data in enumerate(pool.imap(cal_boundary,filelist)):
       print(i)
       print(filelist[i])
