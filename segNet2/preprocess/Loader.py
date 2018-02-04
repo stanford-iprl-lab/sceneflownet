@@ -360,16 +360,19 @@ def cal_transformation(top_dir):
           symmetry_types = []
           c_types_list =[]
           c_vectors_list = []
+          tmp____ = [0]
           for line in symmetry_lines:
             line_tmp = line.strip().split()
             c_types = int(line_tmp[1])
             c_vectors = np.array([float(line_tmp[2]),float(line_tmp[3]),float(line_tmp[4])])
-            c_vectors = c_vectors.reshape((3,0))
-            tmp = c_vectors.dot(np.array(c_vectors_list).T)
-            print(tmp.shape)
             c_types_list.append(c_types)
-            c_vectors_list.append(c_vectors)
- 
+            c_vectors_list.append(c_vectors) 
+            tmp_ = np.array(c_vectors_list)
+            tmp____ = np.abs(np.sum(c_vectors * tmp_,axis=1))
+          print(tmp____)
+          if len(tmp____) > 5:
+            print("%s %s" % (cate_id,md5)) 
+           
         if cate_id in cate_axis and md5 not in cate_except[cate_id] and len(symmetry_lines) > 0:
           frame2_tran, frame2_rot = tran_rot(os.path.join(top_dir,'frame80_'+model_ids[int(instance_id)-1]))             
           frame1_tran, frame1_rot = tran_rot(os.path.join(top_dir,'frame20_'+model_ids[int(instance_id)-1]))
@@ -395,7 +398,8 @@ def cal_transformation(top_dir):
           rot = R.T.dot(R12.dot(R)) 
           tran = R.T.dot(frame1_tran-C) + R.T.dot(R12.dot(C-frame2_tran))
         else:
-          frame2_tran, frame2_rot = tran_rot(os.path.join(top_dir,'frame80_'+model_ids[int(instance_id)-1]))                      frame1_tran, frame1_rot = tran_rot(os.path.join(top_dir,'frame20_'+model_ids[int(instance_id)-1]))
+          frame2_tran, frame2_rot = tran_rot(os.path.join(top_dir,'frame80_'+model_ids[int(instance_id)-1]))                      
+          frame1_tran, frame1_rot = tran_rot(os.path.join(top_dir,'frame20_'+model_ids[int(instance_id)-1]))
           R12 = frame1_rot.dot(np.linalg.inv(frame2_rot))
           rot = R.T.dot(R12.dot(R))
           tran = R.T.dot(frame1_tran-C) + R.T.dot(R12.dot(C-frame2_tran))
@@ -581,7 +585,7 @@ def cal_boundary(top_dir):
    if not os.path.exists(filepath):
      return
    seg = load_seg(filepath)
-   feat = np.zeros((240,320,9))
+   feat = np.zeros((240,320,3))
    feat[:,:,0:3] = seg
    #seg_tmp = seg
    #seg_tmp_ = np.reshape(seg_tmp,(-1,3))
@@ -595,10 +599,10 @@ def cal_boundary(top_dir):
    #  seg_single = seg_single.reshape(-1,3)[0]
    #  new_xyz = rot_mat.dot(seg_single) + transl_tmp
    #  feat[:,:,3:6][seg[:,:,2] == seg_single[2]] = new_xyz
-   feat[:,:,3:6] = seg + transl
-   feat[:,:,6:9] = seg + rot
+   #feat[:,:,3:6] = seg + transl
+   #feat[:,:,6:9] = seg + rot
 
-   d2_image = np.reshape(feat,(-1,9))
+   d2_image = np.reshape(feat,(-1,3))
    idx_c = np.unique(d2_image,axis=0)
    idx_c = [idx_c[i] for i in xrange(len(idx_c)) if idx_c[i][0] != 0.0 and idx_c[i][1] != 0.0 and idx_c[i][2] != 0.0]
    d2_list = [i for i in xrange(len(idx_c))]
@@ -640,7 +644,7 @@ if __name__ == '__main__':
     pool.join()
 
 
-  if 1:
+  if 0:
     filelist = []
     for i in xrange(0,30000):
       top_d = os.path.join(top_dir,str(i))
@@ -648,13 +652,13 @@ if __name__ == '__main__':
       if os.path.exists(top_d):
         filelist.append(top_d)
       print(top_d)
-  
-    pool = Pool(100)
-    for i, data in enumerate(pool.imap(cal_transformation,filelist)):
-      print(i)
+      cal_transformation(top_d)  
+    #pool = Pool(100)
+    #for i, data in enumerate(pool.imap(cal_transformation,filelist)):
+    #  print(i)
 
-    pool.close()
-    pool.join()   
+    #pool.close()
+    #pool.join()   
 
   if 0:
     for i in xrange(0,8500):
@@ -698,9 +702,9 @@ if __name__ == '__main__':
     pool.close()
     pool.join()
 
-  if 0:
+  if 1:
     filelist = []
-    for i in xrange(0,8500):
+    for i in xrange(0,30000):
       top_d = os.path.join(top_dir,str(i))
       if os.path.exists(top_d):
         if not os.path.exists(os.path.join(top_d,"translation.npz")):
