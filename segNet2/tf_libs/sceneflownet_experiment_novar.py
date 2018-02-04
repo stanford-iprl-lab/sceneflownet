@@ -16,7 +16,6 @@ from tf_libs.save_result import generate_result_folder, save_gt_segments, save_p
 from inference.infer import infer_seg,nms
 from evaluation.metric import m_AP50,m_AP75,m_AP90, m_AP
 from mayavi import mlab as mayalab
-#from matplotlib import pyplot as plt
 from preprocess.Loader import angleaxis_rotmatrix 
 
 from tf_libs.train_utils import get_var_list_to_restore,get_var_list_to_restore_by_name
@@ -63,10 +62,14 @@ class Experiment:
 
     if restore_epoch >= 0:
       print('restore epoch %d' % (restore_epoch))
-      restore_var = False
+      restore_var =  True
       if restore_var:
         vars_to_restore = get_var_list_to_restore()
+        for var in vars_to_restore:
+          print("restoring %s" % var.name)
+ 
         checkpoint_path = os.path.join(self.flags.model_save_dir,'-'+str(restore_epoch))
+        print(checkpoint_path)
         restorer = tf.train.Saver(vars_to_restore)
         restorer.restore(self.sess, checkpoint_path)      
       else:
@@ -80,15 +83,6 @@ class Experiment:
       checkpoint_path = '/home/linshaonju/interactive-segmentation/Data/pretrained_models/resnet_v1_50.ckpt'
       restorer = tf.train.Saver(vars_to_restore)
       restorer.restore(self.sess, checkpoint_path)     
- 
-      #vars_to_restore_1 = get_var_list_to_restore_by_name('encode,decode')
-      #checkpoint_path_1 = '/home/linshaonju/interactive-segmentation/segNet2/saved_models/ub/-20'
-      #restorer = tf.train.Saver(vars_to_restore_1)
-      #restorer.restore(self.sess, checkpoint_path_1) 
-      #for var in vars_to_restore_1:
-      #  print("restoring %s" % var.name)
-      for var in tf.trainable_variables():
-        print(var.name)
  
   def build_model(self, tfrecords_filename, num_epochs):
     dim = 3
@@ -119,7 +113,7 @@ class Experiment:
     self.pred['transl'], \
      self.pred['rot'], self.pred['frame2_xyz'], self.pred['frame2_mask'], self.pred['frame2_score'], self.pred['frame2_r']  = self.model(self.input['frame1_xyz'],self.input['frame1_rgb'],self.input['frame2_xyz'],self.input['frame2_rgb'])
 
-    self.pred['objfeat'] = tf.concat([self.pred['frame2_xyz'],self.pred['transl']+self.pred['frame2_xyz'],self.pred['rot']+self.pred['frame2_xyz']],3)
+    self.pred['objfeat'] = tf.concat([self.pred['frame2_xyz'],self.pred['transl']+self.pred['frame2_xyz'], self.pred['rot']+self.pred['frame2_xyz']],3)
     self.gt['objfeat'] = tf.concat([self.gt['frame2_xyz'],self.gt['transl']+self.gt['frame2_xyz'],self.gt['rot']+self.gt['frame2_xyz']],3)
 
     #self.gt['mask_cc'] = tf.nn.max_pool(self.gt['frame2_xyz'][:,:,:,2:],ksize=[1,8,8,1],strides=[1,8,8,1],padding='VALID')
@@ -371,52 +365,62 @@ class Experiment:
     coord.join(threads)
     self.sess.close()
 
-  def result_op(self,save=True):
-    self.gtv['objfeat'],\
-    self.predv['objfeat_masked'],\
-    self.predv['frame2_r'],\
-    self.predv['frame2_score_positive_masked'], 
-    self.instance_idv = self.sess.run([\
-      self.gt['objfeat'],\
-      self.pred['objfeat_masked'],\
-      self.pred['frame2_r'],\
-      self.pred['frame2_score_positive_masked'],\
-      self.instance_id])
-    print('dine')
-    print(self.gt['objfeat']) 
-    print(self.pred['frame2_score_positive_masked'])
-    print(self.pred['objfeat_masked'])
-    print(self.pred['frame2_r'])
-    for i in range(self.batch_size):
-      self.predv['instance_center'], self.predv['instance_boundary'], self.predv['instance_score'] = nms(self.predv['objfeat_masked'][i], self.predv['frame2_r'][i], self.predv['frame2_score_positive_masked'][i])
-      self.predv['final_seg'], self.predv['final_instance'], self.predv['final_score'] = infer_seg(self.predv['instance_center'],self.predv['instance_boundary'],self.predv['instance_score'],self.predv['xyz_masked'][i])
-
-  
-      save = False
-      if save:
-        tmp_path = os.path.join(self.result_save_epoch_top_dir,str(self.instance_idv[i]))
-        np.savez(os.path.join(tmp_path,'gt'),seg=self.gtv['xyz'][i][:,:,2])
-        np.savetxt(os.path.join(tmp_path,'pred.txt'),self.predv['final_score'],fmt='%.8f')
-        for j in range(len(self.predv['final_instance'])):
-          np.savez(os.path.join(tmp_path,'pred'+str(j)),seg=self.predv['final_instance'][j])
-
-
-
   def save_result(self,restore_epoch):
     self.build_framework(restore_epoch=restore_epoch,train_val_test='test') 
  
     self.clean_result_save_dir([str(i) for i in xrange(self.num_instance)],restore_epoch)  
     self.epoch = restore_epoch
-    
-    self.align_variable_value()
+    self.loss_value_init()    
     
     coord = tf.train.Coordinator()
     threads = tf.train.start_queue_runners(sess=self.sess,coord=coord)
  
     for ii in xrange(self.num_batch):
-      self.result_op()
-    print('num_batch %d' % (self.num_batch))
+      print("batch %d" % ii) 
+      self.predv['frame2_mask_truncated'],\
+      self.predv['frame2_score_positive'],\
+      self.predv['frame2_score_positive_masked'],\
+      self.predv['objfeat_masked'],\
+      self.predv['frame2_mask'],\
+      self.predv['frame2_score'],\
+      self.predv['frame2_r'],\
+      self.gtv['frame2_xyz'],\
+      self.predv['objfeat'],\
+      self.lossv['total_loss'],\
+      self.instance_idv,\
+          = self.sess.run([\
+            self.pred['frame2_mask_truncated'],\
+            self.pred['frame2_score_positive'],\
+            self.pred['frame2_score_positive_masked'],\
+            self.pred['objfeat_masked'],\
+            self.pred['frame2_mask'],\
+            self.pred['frame2_score'],\
+            self.pred['frame2_r'],\
+            self.gt['frame2_xyz'],\
+            self.pred['objfeat'],\
+            self.cost,self.instance_id])
+      self.pred['frame2_mask_positive'] = tf.sigmoid(self.pred['frame2_mask'])[:,:,:,1]
+      
+      for i in range(self.batch_size):
+        self.predv['instance_center'], self.predv['instance_boundary'], self.predv['instance_score'] = nms(self.predv['objfeat_masked'][i], self.predv['frame2_r'][i], self.predv['frame2_score_positive_masked'][i])
+        self.predv['final_seg'], self.predv['final_instance'], self.predv['final_score'] = infer_seg(self.predv['instance_center'],self.predv['instance_boundary'],self.predv['instance_score'],self.predv['objfeat_masked'][i])
 
+        save = True
+        if save:
+          print("instance %d" % (self.instance_idv[i]))
+          tmp_path = os.path.join(self.result_save_epoch_top_dir,str(self.instance_idv[i]))
+          np.savez(os.path.join(tmp_path,'gt'),seg=self.gtv['frame2_xyz'][i][:,:,2])
+          np.savetxt(os.path.join(tmp_path,'pred.txt'),self.predv['final_score'],fmt='%.8f')
+          print(len(self.predv['final_instance']))
+          seg_result = np.zeros((240,320,1))
+          for j in range(len(self.predv['final_instance'])):
+            seg_result += self.predv['final_instance'][j] * float(j+1)
+          #np.savez(os.path.join(tmp_path,'pred'),seg = self.predv['frame2_score_positive_masked'][i])
+          np.savez(os.path.join(tmp_path,'pred'),seg=seg_result)
+
+
+    print('num_batch %d' % (self.num_batch))
+ 
     coord.request_stop()
     coord.join(threads)
     self.sess.close()
@@ -425,10 +429,10 @@ class Experiment:
   def whole_process(self):
     #self.train(16)
     #print("finishing trainin")
-    best_epoch = self.validate(37,38)#self.flags.num_epochs)
+    #best_epoch = self.validate(37,38)#self.flags.num_epochs)
     #self.log.log_plotting(['transl','rot','total_loss','flow'])
     #self.test(best_epoch)
-    best_epoch = 36#best_epoch #self.flags.num_epochs - 1
+    best_epoch = 48#best_epoch #self.flags.num_epochs - 1
     self.save_result(best_epoch) 
     self.analysis(best_epoch)
 

@@ -42,7 +42,9 @@ class Experiment:
     self.predv = {}
     self.inputv = {}
     self.gtv = {}
- 
+    self.tfrecord_train_list = [os.path.join(self.flags.train_tfrecords_filename,line) for line in os.listdir(self.flags.train_tfrecords_filename)]
+    print(self.tfrecord_train_list) 
+
   def build_sess(self, restore_epoch):
     self.saver = tf.train.Saver(max_to_keep=self.flags.max_model_to_keep) 
     init_op = tf.group(tf.global_variables_initializer(),
@@ -68,16 +70,18 @@ class Experiment:
       vars_to_restore = get_var_list_to_restore()
       for var in vars_to_restore:
         print("restoring %s" % var.name) 
-      checkpoint_path = '/home/linshaonju/interactive-segmentation/segNet2/saved_models/cc/-30'
+      checkpoint_path = '/home/linshaonju/interactive-segmentation/Data/pretrained_models/resnet_v1_50.ckpt'
       restorer = tf.train.Saver(vars_to_restore)
       restorer.restore(self.sess, checkpoint_path)     
  
-      vars_to_restore_1 = get_var_list_to_restore_by_name('encode,decode')
-      checkpoint_path_1 = '/home/linshaonju/interactive-segmentation/segNet2/saved_models/ub/-20'
+      #vars_to_restore_1 = get_var_list_to_restore_by_name('encode,decode')
+      #checkpoint_path_1 = '/home/linshaonju/interactive-segmentation/segNet2/saved_models/ub/-20'
       #restorer = tf.train.Saver(vars_to_restore_1)
       #restorer.restore(self.sess, checkpoint_path_1) 
-      for var in vars_to_restore_1:
-        print("restoring %s" % var.name)
+      #for var in vars_to_restore_1:
+      #  print("restoring %s" % var.name)
+      for var in tf.trainable_variables():
+        print(var.name)
  
   def build_model(self, tfrecords_filename, num_epochs):
     dim = 3
@@ -90,26 +94,26 @@ class Experiment:
     self.input['frame2_rgb'], \
     self.gt['frame1_id'], \
     self.gt['frame2_id'], \
-    self.gt['frame1_xyz'], \
     self.gt['frame2_xyz'], \
-    self.gt['frame1_r'], \
     self.gt['frame2_r'],\
-    self.gt['frame1_score'],\
     self.gt['frame2_score'], \
     self.gt['transl'], \
     self.gt['rot'], \
     self.gt['frame1_pred_xyz'], \
     self.gt['cc'],\
-    self.instance_id = self.inputf(batch_size = self.batch_size, num_epochs = num_epochs, tfrecords_filename = tfrecords_filename)
+    self.instance_id = self.inputf(batch_size = self.batch_size, num_epochs = num_epochs, tfrecords_filename = self.tfrecord_train_list)
+    print("self.tfrecord_train_list")
+    print(self.tfrecord_train_list)
     imagenet_mean = np.array([123.68, 116.779, 103.939])
     imagenet_mean = np.reshape(imagenet_mean,(1,1,1,3))
-    print(self.input['frame1_rgb'].shape)
     self.input['frame1_rgb'] = self.input['frame1_rgb'] - imagenet_mean
     self.input['frame2_rgb'] = self.input['frame2_rgb'] - imagenet_mean
 
-    self.pred['cc'],\
     self.pred['transl'], \
-     self.pred['rot']  = self.model(self.input['frame1_xyz'],self.input['frame1_rgb'],self.input['frame2_xyz'],self.input['frame2_rgb'])
+     self.pred['rot'], self.pred['frame2_xyz'], self.pred['frame2_mask'], self.pred['frame2_score'], self.pred['frame2_r']  = self.model(self.input['frame1_xyz'],self.input['frame1_rgb'],self.input['frame2_xyz'],self.input['frame2_rgb'])
+
+    self.pred['objfeat'] = tf.concat([self.pred['frame2_xyz'],self.pred['transl']+self.pred['frame2_xyz'],self.pred['rot']+self.pred['frame2_xyz']],3)
+    self.gt['objfeat'] = tf.concat([self.gt['frame2_xyz'],self.gt['transl']+self.gt['frame2_xyz'],self.gt['rot']+self.gt['frame2_xyz']],3)
 
     self.gt['mask_cc'] = tf.nn.max_pool(self.gt['frame2_xyz'][:,:,:,2:],ksize=[1,8,8,1],strides=[1,8,8,1],padding='VALID')
     self.gt['mask_cc'] = tf.cast(self.gt['mask_cc'] > 0.0,tf.float32)
@@ -141,21 +145,32 @@ class Experiment:
 
   
   def loss_op(self):
-    #self.loss['rot'], self.loss['transl']#, self.loss['transl_variance'], self.loss['mask'], self.loss['score'], self.loss['elem'], self.loss['variance'], self.loss['boundary'], self.loss['violation'] = self.lossf(self.pred['xyz'], self.pred['r'], self.pred['mask'], self.pred['score'], self.pred['transl'], self.pred['rot'], self.gt['rot'], self.gt['transl'], self.gt['xyz'], self.gt['r'], self.gt['score'], batch_size=self.batch_size)
-    self.loss['cc'],\
+    self.loss['variance'],\
+    self.loss['violation'],\
+    self.loss['boundary'],\
     self.loss['flow'], \
+    self.loss['rot'],\
+    self.loss['elem'],\
+    self.loss['mask'],\
+    self.loss['score'],\
     self.loss['rot'], \
-    self.loss['transl'] = self.lossf(self.input['frame2_xyz'],\
+    self.loss['transl'] = self.lossf(
+      self.pred['objfeat'],\
+      self.gt['objfeat'],\
+      self.pred['frame2_r'],\
+      self.gt['frame2_r'],\
+      self.pred['frame2_xyz'],\
+      self.pred['frame2_mask'],\
+      self.gt['frame2_score'],\
+      self.pred['frame2_score'],\
+      self.input['frame2_xyz'],\
       self.gt['frame1_pred_xyz'],\
       self.pred['transl'], \
       self.pred['rot'], \
-      self.pred['cc'],\
-      self.gt['mask_cc'],\
-      self.gt['cc'],\
       self.gt['rot'], \
       self.gt['transl'], self.gt['frame2_xyz'], batch_size=self.batch_size)
 
-    self.cost = self.loss['cc'] + self.loss['flow'] * 500  + self.loss['transl'] * 200  +  self.loss['rot']#+ self.loss['mask'] # + self.loss['elem'] * 100.0 + self.loss['boundary'] * 1000.0 + self.loss['score'] * 0.5 + self.loss['violation'] + self.loss['variance']
+    self.cost =  self.loss['rot'] + self.loss['transl'] + self.loss['mask'] + self.loss['score'] + self.loss['elem'] * 100.0 + self.loss['boundary'] * 100.0 + self.loss['flow'] * 100.0 + self.loss['violation'] * 0.1 + self.loss['variance'] * 0.1
 
   def build_framework(self,restore_epoch,train_val_test):
     if restore_epoch >= 0:
@@ -193,7 +208,7 @@ class Experiment:
       self.lossv[key] = None
 
   def loss_value_init(self):
-    self.loss_dict = {'cc':0.0, 'flow':0.0, 'rot':0.0, 'transl_variance':0.0, 'transl':0.0, 'total_loss':0.0,'mask':0.0,'score':0.0,'elem':0.0,'variance':0.0,'boundary':0.0,'violation':0.0}
+    self.loss_dict = {'flow':0.0, 'rot':0.0, 'transl':0.0, 'total_loss':0.0,'mask':0.0,'score':0.0,'elem':0.0,'variance':0.0,'boundary':0.0,'violation':0.0}
     self.log.init_keys(self.loss_dict.keys())
 
 
@@ -233,15 +248,28 @@ class Experiment:
       print('At %s training starts from epoch %d !!! %d batch_size ' % (str(current_time),self.epoch,self.batch_size))
       step=0
       while not coord.should_stop():
-        _, self.lossv['total_loss'],\
-         self.lossv['cc'],\
-         self.lossv['flow'], \
-         self.lossv['rot'], \
-         self.lossv['transl'],\
-        = self.sess.run([self.train_op, \
-           self.cost, self.loss['cc'], self.loss['flow'],self.loss['rot'], self.loss['transl']])
-        self.loss_value_add({'cc':self.lossv['cc'],'flow':self.lossv['flow'] * 100.0, 'total_loss':self.lossv['total_loss'], 'rot':self.lossv['rot'], 'transl':self.lossv['transl']*100.0})
-        #print('cc:%f flow:%f rot:%f transl:%f' % (self.lossv['cc'], self.lossv['flow'],self.lossv['rot'], self.lossv['transl'])) 
+        _,self.lossv['total_loss'],\
+          self.lossv['variance'],\
+          self.lossv['violation'],\
+          self.lossv['boundary'],\
+          self.lossv['flow'],\
+          self.lossv['rot'],\
+          self.lossv['transl'],\
+          self.lossv['mask'],\
+          self.lossv['score'],\
+          self.lossv['elem']= self.sess.run([\
+            self.train_op,\
+            self.cost,\
+            self.loss['variance'],\
+            self.loss['violation'],\
+            self.loss['boundary'],\
+            self.loss['flow'],\
+            self.loss['rot'],\
+            self.loss['transl'],\
+            self.loss['mask'],\
+            self.loss['score'],\
+            self.loss['elem']])
+        self.loss_value_add({'violation':self.lossv['violation'],'variance':self.lossv['variance'],'transl':self.lossv['transl'],'flow':self.lossv['flow'],'boundary':self.lossv['boundary'],'total_loss':self.lossv['total_loss'],'rot':self.lossv['rot'],'mask':self.lossv['mask'], 'score':self.lossv['score'], 'elem':self.lossv['elem']})
         step += 1
         if step % self.num_batch == 0:
           self.loss_value_average()
@@ -524,8 +552,9 @@ class Experiment:
 
 
   def whole_process(self):
-    #self.train(28)
-    best_epoch = self.validate(38,self.flags.num_epochs)
+    self.train(23)
+    print("finishing trainin")
+    best_epoch = self.validate(0,self.flags.num_epochs)
     #self.log.log_plotting(['transl','rot','total_loss','flow'])
     #self.test(best_epoch)
     #best_epoch = 36#best_epoch #self.flags.num_epochs - 1
