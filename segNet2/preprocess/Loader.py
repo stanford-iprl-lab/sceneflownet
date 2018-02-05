@@ -190,10 +190,10 @@ def cal_transformation(top_dir):
       else:    
         tran = -np.mean(frame2_center[frame2_pid],0)
         rot = np.identity(3)
-        print("yes") 
       angle_axis = rotmatrix_angleaxis(rot)
       transformation_translation[frame2_pid] = tran
       transformation_rot[frame2_pid] = angle_axis
+  
   transformation_file = os.path.join(top_dir,'translation.npz')
   rotation_file = os.path.join(top_dir,'rotation.npz')
   np.savez(transformation_file,transl=transformation_translation)
@@ -280,7 +280,7 @@ def cal_flow(top_dir,frame2_input_xyz_file, transformation_file, frame1_id_file,
   pred_frame1_xyz_file = os.path.join(top_dir,'flow.npz')
   np.savez(pred_frame1_xyz_file,flow=pred_frame1_xyz)
 
-  if 1:
+  if 0:
     post_p = frame2_input_xyz.reshape((-1,3)) 
     p1 = pred_frame1_xyz.reshape((-1,3)) + post_p
     prev_p = [line for line in os.listdir(top_dir) if line.startswith('frame20') and line.endswith('.pgm')][0]
@@ -337,10 +337,12 @@ def cal_boundary(top_dir):
    if not os.path.exists(filepath):
      return
    seg = load_seg(filepath)
-   feat = np.zeros((240,320,3))
-   feat = seg
-   
-   d2_image = np.reshape(feat,(-1,3))
+   end_center = np.load(os.path.join(top_dir,'end_center.npz'))['end_center']
+   feat = np.zeros((240,320,6))
+   feat[:,:,0:3] = seg
+   feat[:,:,3:6] = end_center
+
+   d2_image = np.reshape(feat,(-1,6))
    idx_c = np.unique(d2_image,axis=0)
    idx_c = [idx_c[i] for i in xrange(len(idx_c)) if idx_c[i][0] != 0.0 and idx_c[i][1] != 0.0 and idx_c[i][2] != 0.0]
    d2_list = [i for i in xrange(len(idx_c))]
@@ -351,7 +353,7 @@ def cal_boundary(top_dir):
    elif len(idx_c) > 1:
      for i_c in xrange(len(idx_c)):
        dist = np.min(np.array([np.linalg.norm(idx_c[i_c] - idx_c[i]) for i in d2_list if i != i_c]))
-       dist_image[seg[:,:,2] == idx_c[i_c][2]] = dist / 4
+       dist_image[seg[:,:,2] == idx_c[i_c][2]] = dist / 10
    boundary_file = os.path.join(top_dir,'boundary.npz')
    np.savez(boundary_file,boundary=dist_image)
 
@@ -373,7 +375,13 @@ def cal_ending_traj(top_dir):
     if u_i in u_end_id:
       tmp_e = end_pos[(end_id == u_i)[:,:,0]]
       end_center[(start_id == u_i)[:,:,0]] = np.mean(tmp_e,axis=0)
- 
+  ending_traj_file = os.path.join(top_dir,'end_center.npz')
+  np.savez(ending_traj_file,end_center=end_center)
+
+def load_end_center(end_center_file):
+  tmp = np.load(end_center_file)['end_center']
+  
+
 if __name__ == '__main__':
   top_dir = '/home/lins/interactive-segmentation/Data/BlensorResult_val/'
   
@@ -393,7 +401,7 @@ if __name__ == '__main__':
     pool.close()
     pool.join()   
 
-  if 1: 
+  if 0: 
     filelist = []
     for i in xrange(0,4000):
       top_d = os.path.join(top_dir,str(i))
@@ -408,6 +416,7 @@ if __name__ == '__main__':
  
    
   if 0:
+    filelist = []
     for i in xrange(0,4000):
       top_d = os.path.join(top_dir,str(i))
       if os.path.exists(top_d):
@@ -451,7 +460,7 @@ if __name__ == '__main__':
     #pool.join()
 
 
-  if 0:
+  if 1:
     filelist = []
     for i in xrange(0,4000):
       top_d = os.path.join(top_dir,str(i))
