@@ -283,7 +283,7 @@ def cal_flow(top_dir,frame2_input_xyz_file, transformation_file, frame1_id_file,
   pred_frame1_xyz_file = os.path.join(top_dir,'flow.npz')
   np.savez(pred_frame1_xyz_file,flow=pred_frame1_xyz)
 
-  if 1:
+  if 0:
     post_p = frame2_input_xyz.reshape((-1,3)) 
     p1 = pred_frame1_xyz.reshape((-1,3)) + post_p
     prev_p = [line for line in os.listdir(top_dir) if line.startswith('frame20') and line.endswith('.pgm')][0]
@@ -369,6 +369,14 @@ def load_boundary(boundary_file):
 
 
 def cal_ending_traj(top_dir):
+  if not os.path.exists(os.path.join(top_dir,'frame80_labeling_model_id.npz')):
+    return
+  if not os.path.exists(os.path.join(top_dir,'frame20_labeling_model_id.npz')):
+    return
+  if not os.path.exists(os.path.join(top_dir,'frame80_labeling.npz')):
+    return
+  if not os.path.exists(os.path.join(top_dir,'frame20_labeling.npz')):
+    return
   start_pos = load_seg(os.path.join(top_dir,'frame80_labeling.npz'))
   end_pos = load_seg(os.path.join(top_dir,'frame20_labeling.npz'))
   start_id = load_labeling(os.path.join(top_dir,'frame80_labeling_model_id.npz'))
@@ -388,34 +396,21 @@ if __name__ == '__main__':
 
   if 0:
     filelist = []
-    for i in xrange(0,8500):
+    for i in xrange(0,30000):
       top_d = os.path.join(top_dir,str(i))
       transfile = os.path.join(top_d,'translation.npz')
       if os.path.exists(top_d):
         filelist.append(top_d)
     
-    pool = Pool(20)
+    pool = Pool(100)
     for i, data in enumerate(pool.imap(cal_transformation,filelist)):
       print(i)
     pool.close()
     pool.join()   
 
-  if 1: 
-    filelist = []
-    for i in xrange(0,4000):
-      top_d = os.path.join(top_dir,str(i))
-      if os.path.exists(top_d):
-        print(top_d)
-        cal_ending_traj(top_d)
-    pool = Pool(20)
-    for i , data in enumerate(pool.imap(cal_ending_traj,filelist)):
-      print(i)
-    pool.close()
 
- 
-   
   if 0:
-    for i in xrange(0,4000):
+    for i in xrange(0,30000):
       top_d = os.path.join(top_dir,str(i))
       if os.path.exists(top_d):
         frame1_id_file = os.path.join(top_d,'frame20_labeling_model_id.npz')
@@ -427,7 +422,42 @@ if __name__ == '__main__':
           total = top_d + '#' + frame2_input_xyz_file + '#' +frame1_id_file + '#' + frame2_id_file 
           if os.path.exists(frame1_id_file) and os.path.exists(frame2_id_file):
             filelist.append(total)
-            raw_cal_flow(total) 
+    pool = Pool(100)
+    for i, data in enumerate(pool.imap(raw_cal_flow,filelist)):
+      print(i)
+ 
+    pool.close()
+    pool.join()
+    print("pred scene flow")
+
+
+  if 0: 
+    filelist = []
+    for i in xrange(0,30000):
+      top_d = os.path.join(top_dir,str(i))
+      if os.path.exists(top_d):
+        filelist.append(top_d)
+    pool = Pool(100)
+    for i , data in enumerate(pool.imap(cal_ending_traj,filelist)):
+      print(i)
+    pool.close()
+
+
+   
+  if 0:
+    for i in xrange(0,30000):
+      top_d = os.path.join(top_dir,str(i))
+      if os.path.exists(top_d):
+        frame1_id_file = os.path.join(top_d,'frame20_labeling_model_id.npz')
+        frame2_id_file = os.path.join(top_d,'frame80_labeling_model_id.npz')
+        frame2_input_xyz_file = [line for line in os.listdir(top_d) if line.startswith('frame80') and line.endswith('.pgm')] 
+        if len(frame2_input_xyz_file) > 0:
+          frame2_input_xyz_file = frame2_input_xyz_file[0]
+          frame2_input_xyz_file = os.path.join(top_d,frame2_input_xyz_file)
+          total = top_d + '#' + frame2_input_xyz_file + '#' +frame1_id_file + '#' + frame2_id_file 
+          if os.path.exists(frame1_id_file) and os.path.exists(frame2_id_file):
+            filelist.append(total)
+            #raw_cal_flow(total) 
     pool = Pool(100)
     for i, data in enumerate(pool.imap(raw_cal_flow,filelist)):
       print(i)
