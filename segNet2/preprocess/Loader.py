@@ -51,9 +51,11 @@ def load_rgb(filepath):
   image = np.dstack((r,g,b))
   return image 
 
+
 def load_labeling(filepath):
   label_id = np.load(filepath)['labeling']
   return label_id
+
 
 def tran_rot(filepath):
   rot = np.zeros((3,3))
@@ -83,6 +85,7 @@ def rotmatrix_angleaxis(rot):
   angleaxis *= angle
   assert(np.all(np.logical_not(np.isnan(angleaxis))))
   return angleaxis
+
 
 def angleaxis_rotmatrix(angleaxis):
   angle = np.linalg.norm(angleaxis)
@@ -114,6 +117,7 @@ def load_transformation(top_dir):
   transl = np.load(transl_file)['transl']
   rot = np.load(rot_file)['rot']
   return transl, rot
+
 
 def cal_transformation(top_dir):
   pgm_filepath = [line for line in os.listdir(top_dir) if line.endswith('.pgm') and line.startswith('frame80')]
@@ -167,8 +171,6 @@ def cal_transformation(top_dir):
   transformation_rot = np.zeros((h,w,3))
   transformation_translation = np.zeros((h,w,3))
 
-  symmetry_top_dir = '/home/linshaonju/Symmetry'
-
   for instance_id in frame2_id_list:
     frame2_pid = frame2_id == instance_id
     frame2_pid = frame2_pid.reshape((240,320))
@@ -176,7 +178,6 @@ def cal_transformation(top_dir):
     frame1_pid = frame1_pid.reshape((240,320))
 
     if instance_id > 0: 
-      show_flag = False
       if instance_id in frame1_id_list:
         frame1_tran, frame1_rot = tran_rot(os.path.join(top_dir,'frame20_'+model_ids[int(instance_id)-1]))
         frame2_tran, frame2_rot = tran_rot(os.path.join(top_dir,'frame80_'+model_ids[int(instance_id)-1]))
@@ -189,18 +190,17 @@ def cal_transformation(top_dir):
         rot[1,2] *= -1.0
         rot[2,0] *= -1.0
         rot[2,1] *= -1.0
-      else:        
-        tran = np.zeros((3,))
+      else:    
+        tran = -np.mean(frame2_center[frame2_pid],0)
         rot = np.identity(3)
-    
+        print("yes") 
       angle_axis = rotmatrix_angleaxis(rot)
       transformation_translation[frame2_pid] = tran
-      transformation_rot[frame2_pid] = angle_axis #rot.reshape((9))
+      transformation_rot[frame2_pid] = angle_axis
   transformation_file = os.path.join(top_dir,'translation.npz')
   rotation_file = os.path.join(top_dir,'rotation.npz')
   np.savez(transformation_file,transl=transformation_translation)
   np.savez(rotation_file,rot=transformation_rot)
-  return "good"
 
 
 def load_seg(filepath):
@@ -252,11 +252,13 @@ def load_xyz(filename):
             return image
     return np.zeros((h,w,3))
 
+
 def load_flow(top_dir):
   tmp = os.path.join(top_dir,'flow.npz')
   result = np.load(tmp)
   result = result['flow']
   return result
+
 
 def cal_flow(top_dir,frame2_input_xyz_file, transformation_file, frame1_id_file, frame2_id_file):
   frame1_id_file = load_labeling(frame1_id_file)
@@ -278,18 +280,17 @@ def cal_flow(top_dir,frame2_input_xyz_file, transformation_file, frame1_id_file,
        pred_frame1_model = rot_matrix.dot(pred_frame1_model.T).T + transl_model - pred_frame1_model
        pred_frame1_xyz[model_id] = pred_frame1_model
   
-  #return pred_frame1_xyz
   pred_frame1_xyz_file = os.path.join(top_dir,'flow.npz')
   np.savez(pred_frame1_xyz_file,flow=pred_frame1_xyz)
 
-  if 0:
+  if 1:
     post_p = frame2_input_xyz.reshape((-1,3)) 
-    p1 = pred_frame1_xyz.reshape((-1,3)) #+ post_p
+    p1 = pred_frame1_xyz.reshape((-1,3)) + post_p
     prev_p = [line for line in os.listdir(top_dir) if line.startswith('frame20') and line.endswith('.pgm')][0]
     prev_p = os.path.join(top_dir,prev_p)
     prev_p = load_xyz(prev_p)
     p2 = prev_p.reshape((-1,3))
-    mayalab.points3d(p1[:,0],p1[:,1],p1[:,2],mode='point')
+    mayalab.points3d(p1[:,0],p1[:,1],p1[:,2],color=(0,1,0),mode='point')
     mayalab.points3d(p2[:,0],p2[:,1],p2[:,2],color=(1,0,0),mode='point')
     mayalab.show()
 
@@ -325,13 +326,16 @@ def cal_score(top_dir,inputfilename,gtfilename):
   score_file = os.path.join(top_dir,'frame80_score.npz')
   np.savez(score_file,score=score)
 
+
 def load_score(score_file):
   tmp = np.load(score_file)['score']
   return tmp
 
+
 def raw_cal_score(total):
   top_dir,inputfilename, gtfilename = total.split('#')
   cal_score(top_dir,inputfilename,gtfilename)
+
 
 def cal_boundary(top_dir):
    dist_image = np.zeros((240,320,1))
@@ -358,10 +362,25 @@ def cal_boundary(top_dir):
    boundary_file = os.path.join(top_dir,'boundary.npz')
    np.savez(boundary_file,boundary=dist_image)
 
+
 def load_boundary(boundary_file):
   tmp = np.load(boundary_file)['boundary']
   return tmp
 
+
+def cal_ending_traj(top_dir):
+  start_pos = load_seg(os.path.join(top_dir,'frame80_labeling.npz'))
+  end_pos = load_seg(os.path.join(top_dir,'frame20_labeling.npz'))
+  start_id = load_labeling(os.path.join(top_dir,'frame80_labeling_model_id.npz'))
+  end_id = load_labeling(os.path.join(top_dir,'frame20_labeling_model_id.npz'))
+  end_center = np.zeros((240,320,3))
+  u_start_id = np.unique(start_id)
+  u_end_id = np.unique(end_id)
+  for u_i in u_start_id:
+    if u_i in u_end_id:
+      tmp_e = end_pos[(end_id == u_i)[:,:,0]]
+      end_center[(start_id == u_i)[:,:,0]] = np.mean(tmp_e,axis=0)
+ 
 if __name__ == '__main__':
   filelist = []
   top_dir = '/home/linshaonju/interactive-segmentation/Data/BlensorResult_train/'
@@ -374,17 +393,29 @@ if __name__ == '__main__':
       transfile = os.path.join(top_d,'translation.npz')
       if os.path.exists(top_d):
         filelist.append(top_d)
-      print(top_d)
-    pool = Pool(100)
+    
+    pool = Pool(20)
     for i, data in enumerate(pool.imap(cal_transformation,filelist)):
       print(i)
     pool.close()
     pool.join()   
 
-  
+  if 1: 
+    filelist = []
+    for i in xrange(0,4000):
+      top_d = os.path.join(top_dir,str(i))
+      if os.path.exists(top_d):
+        print(top_d)
+        cal_ending_traj(top_d)
+    pool = Pool(20)
+    for i , data in enumerate(pool.imap(cal_ending_traj,filelist)):
+      print(i)
+    pool.close()
+
+ 
    
   if 0:
-    for i in xrange(0,30000):
+    for i in xrange(0,4000):
       top_d = os.path.join(top_dir,str(i))
       if os.path.exists(top_d):
         frame1_id_file = os.path.join(top_d,'frame20_labeling_model_id.npz')
@@ -427,7 +458,7 @@ if __name__ == '__main__':
     #pool.join()
 
 
-  if 1:
+  if 0:
     filelist = []
     for i in xrange(0,10):
       top_d = os.path.join(top_dir,str(i))
