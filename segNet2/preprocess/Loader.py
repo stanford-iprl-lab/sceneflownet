@@ -105,9 +105,6 @@ def angleaxis_rotmatrix(angleaxis):
   rot[2,2] = axis[2] ** 2 * v + c
   return rot
 
-def load_cc(cc_file):
-  cc = np.load(cc_file)['cc']
-  return cc
 
 def load_transformation(top_dir):
   transl_file = os.path.join(top_dir,'translation.npz')
@@ -193,10 +190,10 @@ def cal_transformation(top_dir):
       else:    
         tran = -np.mean(frame2_center[frame2_pid],0)
         rot = np.identity(3)
-        print("yes") 
       angle_axis = rotmatrix_angleaxis(rot)
       transformation_translation[frame2_pid] = tran
       transformation_rot[frame2_pid] = angle_axis
+  
   transformation_file = os.path.join(top_dir,'translation.npz')
   rotation_file = os.path.join(top_dir,'rotation.npz')
   np.savez(transformation_file,transl=transformation_translation)
@@ -343,22 +340,24 @@ def cal_boundary(top_dir):
    filepath = os.path.join(top_dir,'frame80_labeling.npz')
    if not os.path.exists(filepath):
      return
+   if not os.path.exists(os.path.join(top_dir,'end_center.npz')):
+     return
    seg = load_seg(filepath)
-   feat = np.zeros((240,320,3))
-   feat = seg
-   
-   d2_image = np.reshape(feat,(-1,3))
+   end_center = np.load(os.path.join(top_dir,'end_center.npz'))['end_center']
+   feat = np.zeros((240,320,6))
+   feat[:,:,0:3] = seg
+   feat[:,:,3:6] = end_center
+
+   d2_image = np.reshape(feat,(-1,6))
    idx_c = np.unique(d2_image,axis=0)
    idx_c = [idx_c[i] for i in xrange(len(idx_c)) if idx_c[i][0] != 0.0 and idx_c[i][1] != 0.0 and idx_c[i][2] != 0.0]
-   print(idx_c)
    d2_list = [i for i in xrange(len(idx_c))]
    if len(idx_c) == 1:  
      dist_image[seg[:,:,2] == idx_c[0][2]] = 0.02
    elif len(idx_c) > 1:
      for i_c in xrange(len(idx_c)):
        dist = np.min(np.array([np.linalg.norm(idx_c[i_c] - idx_c[i]) for i in d2_list if i != i_c]))
-       print(dist)
-       dist_image[seg[:,:,2] == idx_c[i_c][2]] = dist / 4
+       dist_image[seg[:,:,2] == idx_c[i_c][2]] = dist / 10
    boundary_file = os.path.join(top_dir,'boundary.npz')
    np.savez(boundary_file,boundary=dist_image)
 
@@ -388,15 +387,21 @@ def cal_ending_traj(top_dir):
     if u_i in u_end_id:
       tmp_e = end_pos[(end_id == u_i)[:,:,0]]
       end_center[(start_id == u_i)[:,:,0]] = np.mean(tmp_e,axis=0)
- 
+  ending_traj_file = os.path.join(top_dir,'end_center.npz')
+  np.savez(ending_traj_file,end_center=end_center)
+
+def load_end_center(end_center_file):
+  tmp = np.load(end_center_file)['end_center']
+  return tmp  
+
 if __name__ == '__main__':
   filelist = []
-  top_dir = '/home/linshaonju/interactive-segmentation/Data/BlensorResult_train/'
+  top_dir = '/home/linshaonju/interactive-segmentation/Data/BlensorResult_test/'
 
-
+  num = 8500
   if 0:
     filelist = []
-    for i in xrange(0,30000):
+    for i in xrange(0,num):
       top_d = os.path.join(top_dir,str(i))
       transfile = os.path.join(top_d,'translation.npz')
       if os.path.exists(top_d):
@@ -406,11 +411,10 @@ if __name__ == '__main__':
     for i, data in enumerate(pool.imap(cal_transformation,filelist)):
       print(i)
     pool.close()
-    pool.join()   
 
 
   if 0:
-    for i in xrange(0,30000):
+    for i in xrange(0,num):
       top_d = os.path.join(top_dir,str(i))
       if os.path.exists(top_d):
         frame1_id_file = os.path.join(top_d,'frame20_labeling_model_id.npz')
@@ -427,13 +431,12 @@ if __name__ == '__main__':
       print(i)
  
     pool.close()
-    pool.join()
     print("pred scene flow")
 
 
   if 0: 
     filelist = []
-    for i in xrange(0,30000):
+    for i in xrange(0,num):
       top_d = os.path.join(top_dir,str(i))
       if os.path.exists(top_d):
         filelist.append(top_d)
@@ -443,32 +446,8 @@ if __name__ == '__main__':
     pool.close()
 
 
-   
   if 0:
-    for i in xrange(0,30000):
-      top_d = os.path.join(top_dir,str(i))
-      if os.path.exists(top_d):
-        frame1_id_file = os.path.join(top_d,'frame20_labeling_model_id.npz')
-        frame2_id_file = os.path.join(top_d,'frame80_labeling_model_id.npz')
-        frame2_input_xyz_file = [line for line in os.listdir(top_d) if line.startswith('frame80') and line.endswith('.pgm')] 
-        if len(frame2_input_xyz_file) > 0:
-          frame2_input_xyz_file = frame2_input_xyz_file[0]
-          frame2_input_xyz_file = os.path.join(top_d,frame2_input_xyz_file)
-          total = top_d + '#' + frame2_input_xyz_file + '#' +frame1_id_file + '#' + frame2_id_file 
-          if os.path.exists(frame1_id_file) and os.path.exists(frame2_id_file):
-            filelist.append(total)
-            #raw_cal_flow(total) 
-    pool = Pool(100)
-    for i, data in enumerate(pool.imap(raw_cal_flow,filelist)):
-      print(i)
- 
-    pool.close()
-    pool.join()
-    print("pred scene flow")
-
-
-  if 0:
-    for i in xrange(0,4000):
+    for i in xrange(0,num):
       top_d = os.path.join(top_dir,str(i))
       if os.path.exists(top_d):
         frame2_input_xyz_file = [line for line in os.listdir(top_d) if line.startswith('frame80') and line.endswith('.pgm')] 
@@ -479,30 +458,26 @@ if __name__ == '__main__':
           total = top_d + '#' + frame2_input_xyz_file + '#' +frame2_gt_file
           print(total)
           filelist.append(total)
-          raw_cal_score(total)
-    #pool = Pool(10)
-    #for i, data in enumerate(pool.imap(raw_cal_score,filelist)):
-    #  print(i)
+    pool = Pool(10)
+    for i, data in enumerate(pool.imap(raw_cal_score,filelist)):
+      print(i)
  
-    #pool.close()
-    #pool.join()
+    pool.close()
 
 
-  if 0:
+  if 1:
     filelist = []
-    for i in xrange(0,10):
+    for i in xrange(0,num):
       top_d = os.path.join(top_dir,str(i))
       if os.path.exists(top_d):
         if not os.path.exists(os.path.join(top_d,"translation.npz")):
           print(top_d)
         else:
           filelist.append(top_d)
-          #cal_boundary(top_d)
  
-    pool = Pool(1)
+    pool = Pool(100)
     for i, data in enumerate(pool.imap(cal_boundary,filelist)):
       print(i)
       print(filelist[i])
 
     pool.close()
-    #pool.join() 
