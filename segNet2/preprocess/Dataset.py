@@ -175,7 +175,7 @@ class Dataset(object):
 
 
 def tfrecords_single(db):
-    total_path = os.path.join(DATA_DIR,'Tfrecords_val',str(db.base)+db.tfrecords_filename)
+    total_path = os.path.join(DATA_DIR,'Tfrecords_train',str(db.base)+db.tfrecords_filename)
     
     writer =  tf.python_io.TFRecordWriter(total_path)
     print(total_path)  
@@ -251,26 +251,24 @@ def tfrecords_single(db):
 
 if __name__ == '__main__':
   from data_preparing import train_val_test_list 
-  #train_dataset = Dataset(train_val_test_list._val, ins_dir=os.path.join(DATA_DIR,'BlensorResult_2frame'), ins_extension='.pgm',flag_rotation_aug=True,tfrecords_filename='val_.tfrecords') 
   def data_base(i):
     print("receving %d" % i)
-    train_dataset = Dataset(i,train_val_test_list._train, ins_dir=os.path.join(DATA_DIR,'BlensorResult_test'), ins_extension='.pgm',flag_rotation_aug=True,tfrecords_filename='val.tfrecords')
+    train_dataset = Dataset(i,train_val_test_list._train, ins_dir=os.path.join(DATA_DIR,'BlensorResult_train'), ins_extension='.pgm',flag_rotation_aug=True,tfrecords_filename='train.tfrecords')
     print("base %d" % train_dataset.base)
     return train_dataset
  
-  tflist = [None] * 1
+  tflist = [None] * 60
 
   print("starting") 
-  pool = Pool(1)
-  idlist = [i for i in range(1)]
+  pool = Pool(60)
+  idlist = [i for i in range(60)]
   print(idlist) 
   for i, data in enumerate(pool.imap(data_base,idlist)):
     tflist[i] = data  
   pool.close()
 
 #  print("starting") 
-#  pool = Pool(8)
-#  
-#  for i, data in enumerate(pool.imap(tfrecords_single,tflist)):
-#    print(i)
- 
+  pool = Pool(60)
+  
+  for i, data in enumerate(pool.imap(tfrecords_single,tflist)):
+    print(i) 
