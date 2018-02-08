@@ -8,8 +8,7 @@ import os
 import time
 import sys
 
-
-def loss(gt_xyz,pred_mask, pred_traj, gt_traj, pred_score, gt_score, pred_r, gt_r, pred_flow, gt_flow, batch_size, dim=3, h=240, w=320): 
+def loss(pred_mask, pred_traj, gt_traj, pred_score, gt_score, pred_r, gt_r, pred_flow, gt_flow, batch_size, dim=3, h=240, w=320): 
   obj_mask_origin = tf.greater(gt_traj[:,:,:,2],tf.zeros_like(gt_traj[:,:,:,2]))
   obj_mask_origin = tf.cast(obj_mask_origin,tf.float32)
   obj_mask_1  = tf.reshape(obj_mask_origin,[-1,h,w,1])
