@@ -125,7 +125,27 @@ def cnnmodel(frame1_xyz,frame1_rgb,frame2_xyz,frame2_rgb):
 
   x_s = decoder(x)
   x_transl = tflearn.layers.conv.conv_2d(x_s,3,(3,3),strides=1,activation='linear',weight_decay=1e-3,regularizer='L2')
-  x_rot = tflearn.layers.conv.conv_2d(x_s,3,(3,3),strides=1,activation='linear',weight_decay=1e-3,regularizer='L2')
+  rot_quaternion = tflearn.layers.conv.conv_2d(x_s,4,(3,3),strides=1,activation='linear',weight_decay=1e-3,regularizer='L2')
+
+  quaternion_norm = tf.norm(rot_quaternion,axis=3) * tf.sign(rot_quaternion[:,:,:,0])
+  quaternion_norm = tf.expand_dims(quaternion_norm,-1)
+  rot_quaternion /= quaternion_norm
+
+  w1, x1, y1, z1 = tf.unstack(rot_quaternion, axis=-1)
+  x2, y2, z2  = tf.unstack(frame2_xyz, axis=-1)
+
+  wm =         - x1 * x2 - y1 * y2 - z1 * z2
+  xm = w1 * x2           + y1 * z2 - z1 * y2
+  ym = w1 * y2           + z1 * x2 - x1 * z2
+  zm = w1 * z2           + x1 * y2 - y1 * x2
+
+  x = -wm * x1 + xm * w1 - ym * z1 + zm * y1
+  y = -wm * y1 + ym * w1 - zm * x1 + xm * z1
+  z = -wm * z1 + zm * w1 - xm * y1 + ym * x1
+
+  x_flow = tf.squeeze(tf.stack((x,y,z),axis=-1))
+  x_flow = x_flow + x_transl - frame2_xyz
+
   x_center = tflearn.layers.conv.conv_2d(x_s,3,(3,3),strides=1,activation='linear',weight_decay=1e-3,regularizer='L2')
   x_score = tflearn.layers.conv.conv_2d(x_s,2,(3,3),strides=1,activation='linear',weight_decay=1e-3,regularizer='L2')
   x_mask = tflearn.layers.conv.conv_2d(x_s,2,(3,3),strides=1,activation='linear',weight_decay=1e-3,regularizer='L2')
@@ -133,4 +153,19 @@ def cnnmodel(frame1_xyz,frame1_rgb,frame2_xyz,frame2_rgb):
 
   x_center = tf.add(x_center,frame2_xyz)
 
-  return x_transl, x_rot, x_center, x_mask, x_score, x_boundary
+  xc, yc, zc  = tf.unstack(x_center, axis=-1)
+
+  wmc =         - x1 * xc - y1 * yc - z1 * zc
+  xmc = w1 * xc           + y1 * zc - z1 * yc
+  ymc = w1 * yc           + z1 * xc - x1 * zc
+  zmc = w1 * zc           + x1 * yc - y1 * xc
+
+  xc = -wmc * x1 + xmc * w1 - ymc * z1 + zmc * y1
+  yc = -wmc * y1 + ymc * w1 - zmc * x1 + xmc * z1
+  zc = -wmc * z1 + zmc * w1 - xmc * y1 + ymc * x1
+
+  x_center_p = tf.stack((xc,yc,zc),axis=-1)
+
+  x_traj = tf.concat([x_center,x_center_p],3)
+
+  return x_traj, rot_quaternion, x_transl, x_flow, x_center, x_mask, x_score, x_boundary

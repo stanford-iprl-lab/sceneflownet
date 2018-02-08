@@ -16,7 +16,7 @@ from tf_libs.save_result import generate_result_folder, save_gt_segments, save_p
 from inference.infer import infer_seg,nms
 from evaluation.metric import m_AP50,m_AP75,m_AP90, m_AP
 from mayavi import mlab as mayalab
-from matplotlib import pyplot as plt
+#from matplotlib import pyplot as plt
 from preprocess.Loader import angleaxis_rotmatrix 
 
 from tf_libs.train_utils import get_var_list_to_restore,get_var_list_to_restore_by_name
@@ -130,7 +130,6 @@ class Experiment:
     #self.loss['violation'],\
     self.loss['boundary'],\
     self.loss['flow'],self.loss['elem'],self.loss['mask'],self.loss['score'] = self.lossf(\
-      self.gt['frame2_xyz'],\
       self.pred['frame2_mask'],\
       self.pred['traj'],\
       self.gt['traj'],\
