@@ -407,7 +407,7 @@ if __name__ == '__main__':
       if os.path.exists(top_d):
         filelist.append(top_d)
     
-    pool = Pool(100)
+    pool = Pool(200)
     for i, data in enumerate(pool.imap(cal_transformation,filelist)):
       print(i)
     pool.close()
@@ -440,7 +440,7 @@ if __name__ == '__main__':
       top_d = os.path.join(top_dir,str(i))
       if os.path.exists(top_d):
         filelist.append(top_d)
-    pool = Pool(100)
+    pool = Pool(200)
     for i , data in enumerate(pool.imap(cal_ending_traj,filelist)):
       print(i)
     pool.close()
@@ -475,7 +475,7 @@ if __name__ == '__main__':
         else:
           filelist.append(top_d)
  
-    pool = Pool(100)
+    pool = Pool(200)
     for i, data in enumerate(pool.imap(cal_boundary,filelist)):
       print(i)
       print(filelist[i])
