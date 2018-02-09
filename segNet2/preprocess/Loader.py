@@ -10,6 +10,7 @@ from mayavi import mlab as mayalab
 import skimage.measure
 from multiprocessing import Pool
 import shutil
+import numpy
 
 np.set_printoptions(precision=4,suppress=True,linewidth=300)
 
@@ -40,6 +41,53 @@ def quaternion_matrix(quaternion):
         [    q[1, 2]+q[3, 0], 1.0-q[1, 1]-q[3, 3],     q[2, 3]-q[1, 0], 0.0],
         [    q[1, 3]-q[2, 0],     q[2, 3]+q[1, 0], 1.0-q[1, 1]-q[2, 2], 0.0],
         [                0.0,                 0.0,                 0.0, 1.0]])
+
+def quaternion_from_matrix(matrix,isprecise=False):
+    M = numpy.array(matrix, dtype=numpy.float64, copy=False)[:4, :4]
+    if isprecise:
+        q = numpy.empty((4, ))
+        t = numpy.trace(M)
+        if t > M[3, 3]:
+            q[0] = t
+            q[3] = M[1, 0] - M[0, 1]
+            q[2] = M[0, 2] - M[2, 0]
+            q[1] = M[2, 1] - M[1, 2]
+        else:
+            i, j, k = 0, 1, 2
+            if M[1, 1] > M[0, 0]:
+                i, j, k = 1, 2, 0
+            if M[2, 2] > M[i, i]:
+                i, j, k = 2, 0, 1
+            t = M[i, i] - (M[j, j] + M[k, k]) + M[3, 3]
+            q[i] = t
+            q[j] = M[i, j] + M[j, i]
+            q[k] = M[k, i] + M[i, k]
+            q[3] = M[k, j] - M[j, k]
+            q = q[[3, 0, 1, 2]]
+        q *= 0.5 / math.sqrt(t * M[3, 3])
+    else:
+        m00 = M[0, 0]
+        m01 = M[0, 1]
+        m02 = M[0, 2]
+        m10 = M[1, 0]
+        m11 = M[1, 1]
+        m12 = M[1, 2]
+        m20 = M[2, 0]
+        m21 = M[2, 1]
+        m22 = M[2, 2]
+        # symmetric matrix K
+        K = numpy.array([[m00-m11-m22, 0.0,         0.0,         0.0],
+                         [m01+m10,     m11-m00-m22, 0.0,         0.0],
+                         [m02+m20,     m12+m21,     m22-m00-m11, 0.0],
+                         [m21-m12,     m02-m20,     m10-m01,     m00+m11+m22]])
+        K /= 3.0
+        # quaternion is eigenvector of K that corresponds to largest eigenvalue
+        w, V = numpy.linalg.eigh(K)
+        q = V[[3, 0, 1, 2], numpy.argmax(w)]
+    if q[0] < 0.0:
+        numpy.negative(q, q)
+    return q
+
 
 def load_rgb(filepath):
   tmp = imread(filepath)
@@ -165,7 +213,7 @@ def cal_transformation(top_dir):
   model_ids = [line.split('frame80_')[1] for line in os.listdir(top_dir) if line.endswith('.txt') and line.startswith('frame80')]
 
   model_ids.sort()
-  transformation_rot = np.zeros((h,w,3))
+  transformation_rot = np.zeros((h,w,4))
   transformation_translation = np.zeros((h,w,3))
 
   for instance_id in frame2_id_list:
@@ -175,24 +223,26 @@ def cal_transformation(top_dir):
     frame1_pid = frame1_pid.reshape((240,320))
 
     if instance_id > 0: 
-      if instance_id in frame1_id_list:
-        frame1_tran, frame1_rot = tran_rot(os.path.join(top_dir,'frame20_'+model_ids[int(instance_id)-1]))
-        frame2_tran, frame2_rot = tran_rot(os.path.join(top_dir,'frame80_'+model_ids[int(instance_id)-1]))
-        R12 = frame1_rot.dot(np.linalg.inv(frame2_rot))
-        rot = R.T.dot(R12.dot(R))
-        tran = R.T.dot(frame1_tran-C) + R.T.dot(R12.dot(C-frame2_tran))
+      #if instance_id in frame1_id_list:
+      frame1_tran, frame1_rot = tran_rot(os.path.join(top_dir,'frame20_'+model_ids[int(instance_id)-1]))
+      frame2_tran, frame2_rot = tran_rot(os.path.join(top_dir,'frame80_'+model_ids[int(instance_id)-1]))
+      R12 = frame1_rot.dot(np.linalg.inv(frame2_rot))
+      rot = R.T.dot(R12.dot(R))
+      tran = R.T.dot(frame1_tran-C) + R.T.dot(R12.dot(C-frame2_tran))
   
-        tran[2] *= -1.0
-        rot[0,2] *= -1.0 
-        rot[1,2] *= -1.0
-        rot[2,0] *= -1.0
-        rot[2,1] *= -1.0
-      else:    
-        tran = -np.mean(frame2_center[frame2_pid],0)
-        rot = np.identity(3)
+      tran[2] *= -1.0
+      rot[0,2] *= -1.0 
+      rot[1,2] *= -1.0
+      rot[2,0] *= -1.0
+      rot[2,1] *= -1.0
+      #else:    
+      #  tran = -np.mean(frame2_center[frame2_pid],0)
+      #  rot = np.identity(3)
       angle_axis = rotmatrix_angleaxis(rot)
+      quater = quaternion_from_matrix(rot)
+      print(quater)
       transformation_translation[frame2_pid] = tran
-      transformation_rot[frame2_pid] = angle_axis
+      transformation_rot[frame2_pid] = quater
   
   transformation_file = os.path.join(top_dir,'translation.npz')
   rotation_file = os.path.join(top_dir,'rotation.npz')
@@ -283,6 +333,7 @@ def cal_flow(top_dir,frame2_input_xyz_file, transformation_file, frame1_id_file,
   if 0:
     post_p = frame2_input_xyz.reshape((-1,3)) 
     p1 = pred_frame1_xyz.reshape((-1,3)) + post_p
+    p1 = post_p
     prev_p = [line for line in os.listdir(top_dir) if line.startswith('frame20') and line.endswith('.pgm')][0]
     prev_p = os.path.join(top_dir,prev_p)
     prev_p = load_xyz(prev_p)
@@ -336,6 +387,8 @@ def cal_boundary(top_dir):
    filepath = os.path.join(top_dir,'frame80_labeling.npz')
    if not os.path.exists(filepath):
      return
+   if not os.path.exists(os.path.join(top_dir,'end_center.npz')):
+     return
    seg = load_seg(filepath)
    end_center = np.load(os.path.join(top_dir,'end_center.npz'))['end_center']
    feat = np.zeros((240,320,6))
@@ -364,6 +417,14 @@ def load_boundary(boundary_file):
 
 
 def cal_ending_traj(top_dir):
+  if not os.path.exists(os.path.join(top_dir,'frame80_labeling_model_id.npz')):
+    return
+  if not os.path.exists(os.path.join(top_dir,'frame20_labeling_model_id.npz')):
+    return
+  if not os.path.exists(os.path.join(top_dir,'frame80_labeling.npz')):
+    return
+  if not os.path.exists(os.path.join(top_dir,'frame20_labeling.npz')):
+    return
   start_pos = load_seg(os.path.join(top_dir,'frame80_labeling.npz'))
   end_pos = load_seg(os.path.join(top_dir,'frame20_labeling.npz'))
   start_id = load_labeling(os.path.join(top_dir,'frame80_labeling_model_id.npz'))
@@ -380,44 +441,46 @@ def cal_ending_traj(top_dir):
 
 def load_end_center(end_center_file):
   tmp = np.load(end_center_file)['end_center']
-  
+  return tmp 
 
 if __name__ == '__main__':
   top_dir = '/home/lins/interactive-segmentation/Data/BlensorResult_val/'
   
+  num = 4000
   if 0:
     filelist = []
-    for i in xrange(0,4000):
+    for i in xrange(0,num):
       top_d = os.path.join(top_dir,str(i))
       transfile = os.path.join(top_d,'translation.npz')
       if os.path.exists(top_d):
         filelist.append(top_d)
-        print(top_d)
-        cal_transformation(top_d)
-    pool = Pool(20)
+        #cal_transformation(top_d)
+        if not os.path.exists(os.path.join(top_d,'frame80_labeling_model_id.npz')) or not os.path.exists(os.path.join(top_d,'frame20_labeling_model_id.npz')) or not os.path.exists(os.path.join(top_d,'frame80_labeling.npz')) or not os.path.exists(os.path.join(top_d,'frame20_labeling.npz')):
+          print(top_d)
+          shutil.rmtree(top_d)
+
+    pool = Pool(50)
     for i, data in enumerate(pool.imap(cal_transformation,filelist)):
       print(i)
 
     pool.close()
-    pool.join()   
 
-  if 0: 
+  if 1: 
     filelist = []
-    for i in xrange(0,4000):
+    for i in xrange(0,num):
       top_d = os.path.join(top_dir,str(i))
       if os.path.exists(top_d):
         print(top_d)
-        cal_ending_traj(top_d)
+        filelist.append(top_d)
     pool = Pool(20)
     for i , data in enumerate(pool.imap(cal_ending_traj,filelist)):
       print(i)
     pool.close()
 
- 
    
   if 0:
     filelist = []
-    for i in xrange(0,4000):
+    for i in xrange(0,num):
       top_d = os.path.join(top_dir,str(i))
       if os.path.exists(top_d):
         frame1_id_file = os.path.join(top_d,'frame20_labeling_model_id.npz')
@@ -429,18 +492,20 @@ if __name__ == '__main__':
           total = top_d + '#' + frame2_input_xyz_file + '#' +frame1_id_file + '#' + frame2_id_file 
           if os.path.exists(frame1_id_file) and os.path.exists(frame2_id_file):
             filelist.append(total)
-            raw_cal_flow(total) 
+    #        raw_cal_flow(total)
     pool = Pool(30)
     for i, data in enumerate(pool.imap(raw_cal_flow,filelist)):
       print(i)
  
     pool.close()
-    pool.join()
+    #pool.join()
     print("pred scene flow")
 
 
   if 0:
-    for i in xrange(0,4000):
+    filelist=[]
+
+    for i in xrange(0,num):
       top_d = os.path.join(top_dir,str(i))
       if os.path.exists(top_d):
         frame2_input_xyz_file = [line for line in os.listdir(top_d) if line.startswith('frame80') and line.endswith('.pgm')] 
@@ -451,30 +516,30 @@ if __name__ == '__main__':
           total = top_d + '#' + frame2_input_xyz_file + '#' +frame2_gt_file
           print(total)
           filelist.append(total)
-          raw_cal_score(total)
-    #pool = Pool(10)
-    #for i, data in enumerate(pool.imap(raw_cal_score,filelist)):
-    #  print(i)
+          #raw_cal_score(total)
+    pool = Pool(10)
+    for i, data in enumerate(pool.imap(raw_cal_score,filelist)):
+      print(i)
  
-    #pool.close()
+    pool.close()
     #pool.join()
 
 
-  if 1:
+  if 0:
     filelist = []
-    for i in xrange(0,4000):
+    for i in xrange(0,num):
       top_d = os.path.join(top_dir,str(i))
       if os.path.exists(top_d):
         if not os.path.exists(os.path.join(top_d,"translation.npz")):
           print(top_d)
         else:
           filelist.append(top_d)
-          cal_boundary(top_d)
+    #      cal_boundary(top_d)
  
-    #pool = Pool(10)
-    #for i, data in enumerate(pool.imap(cal_boundary,filelist)):
-    #  print(i)
-    #  print(filelist[i])
+    pool = Pool(10)
+    for i, data in enumerate(pool.imap(cal_boundary,filelist)):
+      print(i)
+      print(filelist[i])
 
-    #pool.close()
+    pool.close()
     #pool.join() 
