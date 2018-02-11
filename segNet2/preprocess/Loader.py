@@ -11,6 +11,7 @@ import skimage.measure
 from multiprocessing import Pool
 import shutil
 import numpy
+from symmetry_issue import *
 
 np.set_printoptions(precision=4,suppress=True,linewidth=300)
 
@@ -163,6 +164,7 @@ def tran_rot(filepath):
 #  rot = np.load(rot_file)['rot']
 #  return transl, rot
 
+fa = open('symmetry_example.txt','a+')
 
 def cal_transformation(top_dir):
   pgm_filepath = [line for line in os.listdir(top_dir) if line.endswith('.pgm') and line.startswith('frame80')]
@@ -209,13 +211,25 @@ def cal_transformation(top_dir):
   transformation_translation = np.zeros((h,w,3))
   
 
+  symmetry_top_dir = '/home/lins/Symmetry'
   for instance_id in frame2_id_list:
     frame2_pid = frame2_id == instance_id
     frame2_pid = frame2_pid.reshape((240,320))
     frame1_pid = frame1_id == instance_id
     frame1_pid = frame1_pid.reshape((240,320))
 
-    if instance_id > 0: 
+    if instance_id > 0:
+      cate,md5 = model_ids[int(instance_id)-1].split('_')[0:2]
+      if cate in cate_symmetry and md5 not in cate_except[cate]:
+        symmetry_file = os.path.join(symmetry_top_dir,cate,md5+'.generator')
+        if os.path.exists(symmetry_file): 
+          symmetry_line = [line for line in open(symmetry_file) if line.startswith('C')]
+          if len(symmetry_line) > 0: 
+            fa.writelines(cate+' '+md5+'\n')
+            for line in symmetry_line:
+              fa.writelines(line)
+          fa.writelines('\n')
+
       frame1_tran, frame1_rot = tran_rot(os.path.join(top_dir,'frame20_'+model_ids[int(instance_id)-1]))
       frame2_tran, frame2_rot = tran_rot(os.path.join(top_dir,'frame80_'+model_ids[int(instance_id)-1]))
       R12 = frame1_rot.dot(np.linalg.inv(frame2_rot))
@@ -535,7 +549,7 @@ if __name__ == '__main__':
   top_dir = '/home/lins/interactive-segmentation/Data/BlensorResult_val/'
   
   num = 4000
-  if 0:
+  if 1:
     filelist = []
     for i in xrange(0,num):
       top_d = os.path.join(top_dir,str(i))
@@ -553,12 +567,12 @@ if __name__ == '__main__':
         #if not os.path.exists(os.path.join(top_d,'frame80_labeling_model_id.npz')) or not os.path.exists(os.path.join(top_d,'frame20_labeling_model_id.npz')) or not os.path.exists(os.path.join(top_d,'frame80_labeling.npz')) or not os.path.exists(os.path.join(top_d,'frame20_labeling.npz')):
         #  print(top_d)
         #  shutil.rmtree(top_d)
+        cal_transformation(top_d)
+    #pool = Pool(50)
+    #for i, data in enumerate(pool.imap(cal_transformation,filelist)):
+    #  print(i)
 
-    pool = Pool(50)
-    for i, data in enumerate(pool.imap(cal_transformation,filelist)):
-      print(i)
-
-    pool.close()
+    #pool.close()
 
    
   if 0:
