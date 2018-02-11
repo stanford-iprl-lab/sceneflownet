@@ -39,7 +39,7 @@ class Dataset(object):
 
     self.generate_path()
     self.base = int(base) 
-    self.base_step = int(500)
+    self.base_step = int(1000)
 
   def generate_path(self):
     self._ins_ids = []
@@ -53,7 +53,7 @@ class Dataset(object):
     self._outs_path['boundary'] = []
     self._outs_path['flow'] = []
     self._outs_path['end_center'] = []
-
+   
     ins_= {}
     outs_ = {}
     for id_line in xrange(self._num_examples):
@@ -72,7 +72,8 @@ class Dataset(object):
       outs_['boundary'] = [line for line in os.listdir(ins_sub_dir) if line.startswith('boundary.npz')]
       outs_['flow'] = [line for line in os.listdir(ins_sub_dir) if line.startswith('flow')]
       outs_['end_center'] = [line for line in os.listdir(ins_sub_dir) if line.startswith('end_center.npz')] 
-        
+     
+      
       num_list = []
       for key in ins_:
         num_list.append(len(ins_[key]))
@@ -99,7 +100,7 @@ class Dataset(object):
  	
 
 def tfrecords_single(db):
-    total_path = os.path.join(DATA_DIR,'Tfrecords_train',str(db.base)+db.tfrecords_filename)
+    total_path = os.path.join(DATA_DIR,'Tfrecords_test',str(db.base)+db.tfrecords_filename)
     
     writer =  tf.python_io.TFRecordWriter(total_path)
     print(total_path)  
@@ -160,43 +161,23 @@ def tfrecords_single(db):
 if __name__ == '__main__':
   from data_preparing import train_val_test_list 
   def data_base(i):
-    print("receving %d" % i)
-<<<<<<< HEAD
-    train_dataset = Dataset(i,train_val_test_list._train, ins_dir=os.path.join(DATA_DIR,'BlensorResult_train'), ins_extension='.pgm',flag_rotation_aug=True,tfrecords_filename='train.tfrecords')
+    train_dataset = Dataset(i,train_val_test_list._train, ins_dir=os.path.join(DATA_DIR,'BlensorResult_test'), ins_extension='.pgm',flag_rotation_aug=True,tfrecords_filename='test.tfrecords')
     print("base %d" % train_dataset.base)
     return train_dataset
  
-  tflist = [None] * 60
+  tflist = [None] * 9
 
   print("starting") 
-  pool = Pool(60)
-  idlist = [i for i in range(60)]
-=======
-    train_dataset = Dataset(i,train_val_test_list._train, ins_dir=os.path.join(DATA_DIR,'BlensorResult_val'), ins_extension='.pgm',flag_rotation_aug=True,tfrecords_filename='val.tfrecords')
-    print("base %d" % train_dataset.base)
-    return train_dataset
- 
-  tflist = [None] * 8
-
-  print("starting") 
-  pool = Pool(17)
-  idlist = [i for i in range(8)]
->>>>>>> 8521d25484a22e39011a513d85a8ec2cf3ac5cc6
-  print(idlist) 
+  pool = Pool(30)
+  
+  idlist = [i for i in range(9)]
+  
   for i, data in enumerate(pool.imap(data_base,idlist)):
     tflist[i] = data  
   pool.close()
-<<<<<<< HEAD
-
-#  print("starting") 
-  pool = Pool(60)
   
-  for i, data in enumerate(pool.imap(tfrecords_single,tflist)):
-    print(i) 
-=======
-  pool = Pool(17)
+  pool = Pool(30)
   
   for i, data in enumerate(pool.imap(tfrecords_single,tflist)):
     print(i)
   pool.close()
->>>>>>> 8521d25484a22e39011a513d85a8ec2cf3ac5cc6

@@ -73,12 +73,9 @@ def read_and_decode(filename_queue):
 
 
 def inputs(batch_size,num_epochs,tfrecords_filename):
-  print("at least erhe")
-  print(tfrecords_filename)
   with tf.name_scope('inputf'):
     filename_queue = tf.train.string_input_producer(
       tfrecords_filename, num_epochs=num_epochs)
-    print("aaa")
     in_1frame_xyz_, \
       in_1frame_rgb_, \
       in_2frame_xyz_, \
@@ -90,7 +87,6 @@ def inputs(batch_size,num_epochs,tfrecords_filename):
       gt_flow_, \
       instance_id_ = read_and_decode(filename_queue)
     
-    print("here ")
     in_1frame_xyz,\
       in_1frame_rgb,\
       in_2frame_xyz, \

@@ -126,7 +126,6 @@ class Experiment:
 
   
   def loss_op(self):
-    #self.loss['variance'],\
     #self.loss['violation'],\
     self.loss['boundary'],\
     self.loss['flow'],self.loss['elem'],self.loss['mask'],self.loss['score'] = self.lossf(\
@@ -141,7 +140,7 @@ class Experiment:
       self.gt['flow'],\
       batch_size=self.batch_size)
 
-    self.cost = self.loss['mask']+ self.loss['elem'] * 100.0 #+ self.loss['score'] + self.loss['flow'] * 100.0 #self.loss['boundary'] * 100.0 + self.loss['flow'] * 1000.0# + self.loss['violation'] * 0.1 + self.loss['variance'] * 0.1 
+    self.cost = self.loss['mask'] * 0.01+ self.loss['flow']  #+ self.loss['score'] + self.loss['flow'] * 100.0 #self.loss['boundary'] * 100.0 + self.loss['flow'] * 1000.0# + self.loss['violation'] * 0.1 + self.loss['variance'] * 0.1 
 
   def build_framework(self,restore_epoch,train_val_test):
     if restore_epoch >= 0:
@@ -298,12 +297,12 @@ class Experiment:
             self.loss['mask'],\
             self.loss['score'],\
             self.loss['flow']])
-        plt.figure(0)
-        print(self.predv['frame2_mask_truncated'][0].shape)
-        plt.imshow(self.predv['frame2_mask_truncated'][0])
-        plt.figure(1)
-        plt.imshow(self.gtv['frame2_xyz'][0][:,:,2])
-        plt.show()
+        #plt.figure(0)
+        #print(self.predv['frame2_mask_truncated'][0].shape)
+        #plt.imshow(self.predv['frame2_mask_truncated'][0])
+        #plt.figure(1)
+        #plt.imshow(self.gtv['frame2_xyz'][0][:,:,2])
+        #plt.show()
         self.loss_value_add({'flow':self.lossv['flow'],'boundary':self.lossv['boundary'],'total_loss':self.lossv['total_loss'],'mask':self.lossv['mask'], 'score':self.lossv['score'], 'elem':self.lossv['elem']})
     print('num_batch %d' % (self.num_batch))
     self.loss_value_average()
@@ -404,9 +403,9 @@ class Experiment:
 
 
   def whole_process(self):
-    self.train()
+    #self.train(6)
     #print("finishing traini)
-    best_epoch = self.validate(0,30)#self.flags.num_epochs)
+    best_epoch = self.validate(6,30)#self.flags.num_epochs)
     #self.log.log_plotting(['transl','rot','total_loss','flow'])
     #self.test(best_epoch)
     best_epoch = 47#best_epoch #self.flags.num_epochs - 1
