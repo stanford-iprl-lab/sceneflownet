@@ -107,7 +107,7 @@ def cnnmodel(frame1_xyz,frame1_rgb,frame2_xyz,frame2_rgb):
   ### quaternion normalize 
   quaternion_norm = tf.norm(rot_quaternion,axis=3) * tf.sign(rot_quaternion[:,:,:,0])
   quaternion_norm = tf.expand_dims(quaternion_norm,-1)
-  x_quaternion = rot_quaternion / (quaternion_norm)
+  x_quaternion = rot_quaternion / (quaternion_norm + 0.0000000001)
  
   w1, x1, y1, z1 = tf.unstack(x_quaternion, axis=-1)
   x2, y2, z2  = tf.unstack(frame2_xyz, axis=-1)
@@ -122,7 +122,6 @@ def cnnmodel(frame1_xyz,frame1_rgb,frame2_xyz,frame2_rgb):
   z = -wm * z1 + zm * w1 - xm * y1 + ym * x1
 
   x_flow = tf.stack((x,y,z),axis=-1)
-  #x_flow = tf.squeeze(tf.stack((x,y,z),axis=-1))
   x_flow = x_flow + x_transl - frame2_xyz
 
   x_center = tflearn.layers.conv.conv_2d(x_s,3,(3,3),strides=1,activation='linear',weight_decay=1e-3,regularizer='L2')
@@ -145,4 +144,4 @@ def cnnmodel(frame1_xyz,frame1_rgb,frame2_xyz,frame2_rgb):
   x_center_p = tf.stack((xc,yc,zc),axis=-1)
   
   x_traj = tf.concat([x_center,x_center],3)#x_center_p],3)
-  return rot_quaternion, x_transl, x_traj, x_flow, x_center, x_mask, x_score, x_boundary
+  return x_quaternion, x_transl, x_traj, x_flow, x_center, x_mask, x_score, x_boundary

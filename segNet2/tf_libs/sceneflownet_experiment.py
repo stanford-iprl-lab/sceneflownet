@@ -94,8 +94,6 @@ class Experiment:
     self.gt['transl'],\
     self.gt['quater'],\
     self.instance_id = self.inputf(batch_size = self.batch_size, num_epochs = num_epochs, tfrecords_filename = tfrecords_filename)
-    print("self")
-    print(self.gt['end_center']) 
 
     imagenet_mean = np.array([123.68, 116.779, 103.939])
     imagenet_mean = np.reshape(imagenet_mean,(1,1,1,3))
@@ -158,7 +156,7 @@ class Experiment:
       self.gt['flow'],\
       batch_size=self.batch_size)
 
-    self.cost = self.loss['mask'] #* 0.01 + self.loss['flow'] + self.loss['quater'] + self.loss['transl']#+ self.loss['score'] + self.loss['flow'] * 100.0 #self.loss['boundary'] * 100.0 + self.loss['flow'] * 1000.0# + self.loss['violation'] * 0.1 + self.loss['variance'] * 0.1 
+    self.cost =  self.loss['flow']#+ self.loss['score'] + self.loss['flow'] * 100.0 #self.loss['boundary'] * 100.0 + self.loss['flow'] * 1000.0# + self.loss['violation'] * 0.1 + self.loss['variance'] * 0.1 
 
   def build_framework(self,restore_epoch,train_val_test):
     if restore_epoch >= 0:
