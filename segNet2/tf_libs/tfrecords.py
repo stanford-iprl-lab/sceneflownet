@@ -28,6 +28,8 @@ def read_and_decode(filename_queue):
       'outs_2frame_score':tf.FixedLenFeature([],tf.string),  
       'outs_flow':tf.FixedLenFeature([],tf.string),
       'outs_end_center':tf.FixedLenFeature([],tf.string),
+      'outs_transl':tf.FixedLenFeature([],tf.string),
+      'outs_rot':tf.FixedLenFeature([],tf.string),
       'instance_id':tf.FixedLenFeature([],tf.int64),
     })
 
@@ -37,13 +39,12 @@ def read_and_decode(filename_queue):
   in_2frame_rgb= tf.decode_raw(features['in_2frame_rgb'],tf.float32)
  
   outs_2frame_xyz = tf.decode_raw(features['outs_2frame_xyz'],tf.float32)
-
   outs_2frame_score = tf.decode_raw(features['outs_2frame_score'],tf.float32)
-
   outs_2frame_r = tf.decode_raw(features['outs_2frame_r'],tf.float32)
-
   outs_flow = tf.decode_raw(features['outs_flow'],tf.float32)
   outs_end_center = tf.decode_raw(features['outs_end_center'],tf.float32)
+  outs_transl = tf.decode_raw(features['outs_transl'],tf.float32)
+  outs_quater = tf.decode_raw(features['outs_rot'],tf.float32)
 
   in_1frame_xyz = tf.reshape(in_1frame_xyz,[h,w,3])
   in_2frame_xyz = tf.reshape(in_2frame_xyz,[h,w,3])
@@ -54,7 +55,9 @@ def read_and_decode(filename_queue):
 
   outs_2frame_r = tf.reshape(outs_2frame_r,[h,w,1])
   outs_2frame_score = tf.reshape(outs_2frame_score,[h,w])
- 
+  outs_transl = tf.reshape(outs_transl,[h,w,3])
+  outs_quater = tf.reshape(outs_quater,[h,w,4]) 
+
   outs_flow = tf.reshape(outs_flow,[h,w,3])
   outs_end_center = tf.reshape(outs_end_center,[h,w,3])
  
@@ -69,6 +72,8 @@ def read_and_decode(filename_queue):
          outs_2frame_score, \
          outs_end_center,\
          outs_flow, \
+         outs_transl,\
+         outs_quater,\
          instance_id
 
 
@@ -85,6 +90,8 @@ def inputs(batch_size,num_epochs,tfrecords_filename):
       gt_2frame_score_, \
       gt_end_center_,\
       gt_flow_, \
+      gt_trans_,\
+      gt_quater_,\
       instance_id_ = read_and_decode(filename_queue)
     
     in_1frame_xyz,\
@@ -96,6 +103,8 @@ def inputs(batch_size,num_epochs,tfrecords_filename):
       gt_2frame_score, \
       gt_end_center,\
       gt_flow, \
+      gt_trans,\
+      gt_quater,\
       instance_id = tf.train.shuffle_batch(
         [in_1frame_xyz_,\
          in_1frame_rgb_,\
@@ -106,6 +115,8 @@ def inputs(batch_size,num_epochs,tfrecords_filename):
          gt_2frame_score_, \
          gt_end_center_,\
          gt_flow_,\
+         gt_trans_,\
+         gt_quater_,\
          instance_id_],\
       batch_size=batch_size, num_threads=10,
       capacity = 10 + 3 * batch_size,
@@ -120,4 +131,6 @@ def inputs(batch_size,num_epochs,tfrecords_filename):
            gt_2frame_score,\
            gt_end_center,\
            gt_flow,\
+           gt_trans,\
+           gt_quater,\
            instance_id 

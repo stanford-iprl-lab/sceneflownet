@@ -17,8 +17,6 @@ from inference.infer import infer_seg,nms
 from evaluation.metric import m_AP50,m_AP75,m_AP90, m_AP
 from mayavi import mlab as mayalab
 #from matplotlib import pyplot as plt
-from preprocess.Loader import angleaxis_rotmatrix 
-
 from tf_libs.train_utils import get_var_list_to_restore,get_var_list_to_restore_by_name
 
 class Experiment:
@@ -91,9 +89,9 @@ class Experiment:
     self.gt['frame2_score'], \
     self.gt['end_center'], \
     self.gt['flow'],\
+    self.gt['transl'],\
+    self.gt['quater'],\
     self.instance_id = self.inputf(batch_size = self.batch_size, num_epochs = num_epochs, tfrecords_filename = tfrecords_filename)
-    print("self")
-    print(self.gt['end_center']) 
 
     imagenet_mean = np.array([123.68, 116.779, 103.939])
     imagenet_mean = np.reshape(imagenet_mean,(1,1,1,3))
@@ -101,7 +99,18 @@ class Experiment:
     self.input['frame2_rgb'] = self.input['frame2_rgb'] - imagenet_mean
  
 
-    self.pred['traj'], self.pred['quaternion'],self.pred['transl'],self.pred['flow'],self.pred['frame2_xyz'], self.pred['frame2_mask'], self.pred['frame2_score'], self.pred['frame2_r']  = self.model(self.input['frame1_xyz'],self.input['frame1_rgb'],self.input['frame2_xyz'],self.input['frame2_rgb'])
+    self.pred['quater'],\
+      self.pred['transl'],\
+      self.pred['traj'],\
+      self.pred['flow'],\
+      self.pred['frame2_xyz'],\
+      self.pred['frame2_mask'],\
+      self.pred['frame2_score'],\
+      self.pred['frame2_r']  = self.model(\
+      self.input['frame1_xyz'],\
+      self.input['frame1_rgb'],\
+      self.input['frame2_xyz'],\
+      self.input['frame2_rgb'])
 
     
     self.gt['traj'] =  tf.concat([self.gt['frame2_xyz'],self.gt['end_center']],3)
@@ -126,9 +135,14 @@ class Experiment:
 
   
   def loss_op(self):
-    #self.loss['violation'],\
+    self.loss['quater'],\
+    self.loss['transl'],\
     self.loss['boundary'],\
     self.loss['flow'],self.loss['elem'],self.loss['mask'],self.loss['score'] = self.lossf(\
+      self.pred['quater'],\
+      self.gt['quater'],\
+      self.pred['transl'],\
+      self.gt['transl'],\
       self.pred['frame2_mask'],\
       self.pred['traj'],\
       self.gt['traj'],\
@@ -140,7 +154,7 @@ class Experiment:
       self.gt['flow'],\
       batch_size=self.batch_size)
 
-    self.cost = self.loss['mask'] * 0.01+ self.loss['flow']  #+ self.loss['score'] + self.loss['flow'] * 100.0 #self.loss['boundary'] * 100.0 + self.loss['flow'] * 1000.0# + self.loss['violation'] * 0.1 + self.loss['variance'] * 0.1 
+    self.cost =  self.loss['flow']#+ self.loss['score'] + self.loss['flow'] * 100.0 #self.loss['boundary'] * 100.0 + self.loss['flow'] * 1000.0# + self.loss['violation'] * 0.1 + self.loss['variance'] * 0.1 
 
   def build_framework(self,restore_epoch,train_val_test):
     if restore_epoch >= 0:
@@ -178,7 +192,7 @@ class Experiment:
       self.lossv[key] = None
 
   def loss_value_init(self):
-    self.loss_dict = {'flow':0.0,'total_loss':0.0,'mask':0.0,'score':0.0,'elem':0.0,'variance':0.0,'boundary':0.0,'violation':0.0}
+    self.loss_dict = {'transl':0.0,'quater':0.0,'flow':0.0,'total_loss':0.0,'mask':0.0,'score':0.0,'elem':0.0,'variance':0.0,'boundary':0.0,'violation':0.0}
     self.log.init_keys(self.loss_dict.keys())
 
 
@@ -219,8 +233,8 @@ class Experiment:
       step=0
       while not coord.should_stop():
         _,self.lossv['total_loss'],\
-            self.gtv['traj'],\
-            self.gtv['frame2_xyz'],\
+            self.lossv['transl'],\
+            self.lossv['quater'],\
             self.lossv['boundary'],\
             self.lossv['elem'],\
             self.lossv['mask'],\
@@ -228,19 +242,14 @@ class Experiment:
             self.lossv['flow']= self.sess.run([\
             self.train_op,\
             self.cost,\
-            self.gt['traj'],\
-            self.gt['frame2_xyz'],\
+            self.loss['transl'],\
+            self.loss['quater'],\
             self.loss['boundary'],\
             self.loss['elem'],\
             self.loss['mask'],\
             self.loss['score'],\
             self.loss['flow']])
-        #print(self.gtv['traj'][:,:,:,0:3].shape)
-        #print(self.gtv['frame2_xyz'].shape)
-        diff = np.abs(self.gtv['traj'][:,:,:,3:]-self.gtv['frame2_xyz'])
-        diff = diff.reshape((-1,))
-        #print(np.max(diff))
-        self.loss_value_add({'flow':self.lossv['flow'],'boundary':self.lossv['boundary'],'total_loss':self.lossv['total_loss'],'mask':self.lossv['mask'], 'score':self.lossv['score'], 'elem':self.lossv['elem']})
+        self.loss_value_add({'transl':self.lossv['transl'],'quater':self.lossv['quater'],'flow':self.lossv['flow'],'boundary':self.lossv['boundary'],'total_loss':self.lossv['total_loss'],'mask':self.lossv['mask'], 'score':self.lossv['score'], 'elem':self.lossv['elem']})
         step += 1
         if step % self.num_batch == 0:
           self.loss_value_average()
@@ -280,8 +289,9 @@ class Experiment:
     self.loss_value_init() 
     for ii in xrange(self.num_batch):
         self.lossv['total_loss'],\
-            self.gtv['frame2_xyz'],\
-            self.predv['frame2_mask_truncated'],\
+            self.gtv['flow'],\
+            self.predv['flow'],\
+            self.predv['traj_masked'],\
             self.gtv['traj'],\
             self.lossv['boundary'],\
             self.lossv['elem'],\
@@ -289,20 +299,15 @@ class Experiment:
             self.lossv['score'],\
             self.lossv['flow']= self.sess.run([\
             self.cost,\
-            self.gt['frame2_xyz'],\
-            self.pred['frame2_mask_truncated'],\
+            self.gt['flow'],\
+            self.pred['flow'],\
+            self.pred['traj_masked'],\
             self.gt['traj'],\
             self.loss['boundary'],\
             self.loss['elem'],\
             self.loss['mask'],\
             self.loss['score'],\
             self.loss['flow']])
-        #plt.figure(0)
-        #print(self.predv['frame2_mask_truncated'][0].shape)
-        #plt.imshow(self.predv['frame2_mask_truncated'][0])
-        #plt.figure(1)
-        #plt.imshow(self.gtv['frame2_xyz'][0][:,:,2])
-        #plt.show()
         self.loss_value_add({'flow':self.lossv['flow'],'boundary':self.lossv['boundary'],'total_loss':self.lossv['total_loss'],'mask':self.lossv['mask'], 'score':self.lossv['score'], 'elem':self.lossv['elem']})
     print('num_batch %d' % (self.num_batch))
     self.loss_value_average()
@@ -367,7 +372,6 @@ class Experiment:
       self.predv['instance_center'], self.predv['instance_boundary'], self.predv['instance_score'] = nms(self.predv['traj_masked'][i], self.predv['frame2_boundary_masked'][i], self.predv['frame2_score_positive_masked'][i])
       self.predv['final_seg'], self.predv['final_instance'], self.predv['final_score'] = infer_seg(self.predv['instance_center'],self.predv['instance_boundary'],self.predv['instance_score'],self.predv['traj_masked'][i])
  
-        #plt.figure(2)
       save = True
       if save:
         tmp_path = os.path.join(self.result_save_epoch_top_dir,str(self.instance_idv[i]))
@@ -403,9 +407,9 @@ class Experiment:
 
 
   def whole_process(self):
-    #self.train(6)
+    self.train()
     #print("finishing traini)
-    best_epoch = self.validate(6,30)#self.flags.num_epochs)
+    best_epoch = self.validate(47,65)#self.flags.num_epochs)
     #self.log.log_plotting(['transl','rot','total_loss','flow'])
     #self.test(best_epoch)
     best_epoch = 47#best_epoch #self.flags.num_epochs - 1

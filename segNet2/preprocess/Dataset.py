@@ -53,7 +53,9 @@ class Dataset(object):
     self._outs_path['boundary'] = []
     self._outs_path['flow'] = []
     self._outs_path['end_center'] = []
-   
+    self._outs_path['transl'] = []
+    self._outs_path['rot'] = []
+
     ins_= {}
     outs_ = {}
     for id_line in xrange(self._num_examples):
@@ -72,15 +74,15 @@ class Dataset(object):
       outs_['boundary'] = [line for line in os.listdir(ins_sub_dir) if line.startswith('boundary.npz')]
       outs_['flow'] = [line for line in os.listdir(ins_sub_dir) if line.startswith('flow')]
       outs_['end_center'] = [line for line in os.listdir(ins_sub_dir) if line.startswith('end_center.npz')] 
-     
-      
+      outs_['transl'] = [line for line in os.listdir(ins_sub_dir) if line.startswith('translation.npz')] 
+      outs_['rot'] = [line for line in os.listdir(ins_sub_dir) if line.startswith('rotation.npz')] 
+       
       num_list = []
       for key in ins_:
         num_list.append(len(ins_[key]))
       for key in outs_:
         num_list.append(len(outs_[key]))
       num_list = np.array(num_list)
-      
       if np.all(num_list == num_list[0]) and num_list[0] == 1:
         self._ins_path['1framexyz'].append(os.path.join(ins_sub_dir,ins_['1framexyz'][0]))
         self._ins_path['2framexyz'].append(os.path.join(ins_sub_dir,ins_['2framexyz'][0]))
@@ -92,6 +94,9 @@ class Dataset(object):
         self._outs_path['boundary'].append(os.path.join(ins_sub_dir,outs_['boundary'][0]))
         self._outs_path['flow'].append(os.path.join(ins_sub_dir,outs_['flow'][0]))
         self._outs_path['end_center'].append(os.path.join(ins_sub_dir,outs_['end_center'][0]))
+        self._outs_path['transl'].append(os.path.join(ins_sub_dir,outs_['transl'][0]))
+        self._outs_path['rot'].append(os.path.join(ins_sub_dir,outs_['rot'][0]))
+ 
         self._ins_ids.append(ins_sub_dir.split('/')[-1])
 
     self.num_instance = len(self._ins_path['1framexyz'])
@@ -100,7 +105,7 @@ class Dataset(object):
  	
 
 def tfrecords_single(db):
-    total_path = os.path.join(DATA_DIR,'Tfrecords_test',str(db.base)+db.tfrecords_filename)
+    total_path = os.path.join(DATA_DIR,'Tfrecords_val',str(db.base)+db.tfrecords_filename)
     
     writer =  tf.python_io.TFRecordWriter(total_path)
     print(total_path)  
@@ -117,10 +122,11 @@ def tfrecords_single(db):
       ins_['2framergb'] = load_rgb(db._ins_path['2framergb'][idx]).astype(np.float32)
       outs_['2framexyz'] = load_seg(db._outs_path['2framexyz'][idx]).astype(np.float32)
       outs_['2framer'] = load_boundary(db._outs_path['boundary'][idx]).astype(np.float32)
-      outs_['2framescore'] = load_score(db._outs_path['2framescore'][idx]).astype(np.float32)
- 
+      outs_['2framescore'] = load_score(db._outs_path['2framescore'][idx]).astype(np.float32) 
       outs_['flow'] = load_flow(db._outs_path['top_dir'][idx]).astype(np.float32)
       outs_['end_center'] = load_end_center(db._outs_path['end_center'][idx]).astype(np.float32)
+      outs_['transl'] = load_transl(db._outs_path['transl'][idx]).astype(np.float32)
+      outs_['rot'] = load_rot(db._outs_path['rot'][idx]).astype(np.float32)
 
       instance_id = int(db._ins_ids[idx])
       print('instance_id %d ' % (instance_id))
@@ -133,12 +139,11 @@ def tfrecords_single(db):
       ins_2frame_xyz = ins_['2framexyz'].tostring()
       outs_2frame_xyz = outs_['2framexyz'].tostring()
       outs_2frame_r = outs_['2framer'].tostring()
-      
       outs_2frame_score = outs_['2framescore'].tostring()
-  
-   
       outs_flow =  outs_['flow'].tostring()
       outs_end_center = outs_['end_center'].tostring()
+      outs_transl = outs_['transl'].tostring()
+      outs_rot = outs_['rot'].tostring()
 
       example = tf.train.Example(features=tf.train.Features(feature={
           'instance_id':_int64_feature(instance_id),
@@ -150,6 +155,8 @@ def tfrecords_single(db):
           'outs_2frame_r':_bytes_feature(outs_2frame_r),
           'outs_2frame_score':_bytes_feature(outs_2frame_score),
           'outs_end_center':_bytes_feature(outs_end_center),
+          'outs_transl':_bytes_feature(outs_transl),
+          'outs_rot':_bytes_feature(outs_rot),
           'outs_flow':_bytes_feature(outs_flow)
         }))
 
@@ -161,22 +168,22 @@ def tfrecords_single(db):
 if __name__ == '__main__':
   from data_preparing import train_val_test_list 
   def data_base(i):
-    train_dataset = Dataset(i,train_val_test_list._train, ins_dir=os.path.join(DATA_DIR,'BlensorResult_test'), ins_extension='.pgm',flag_rotation_aug=True,tfrecords_filename='test.tfrecords')
+    train_dataset = Dataset(i,train_val_test_list._train, ins_dir=os.path.join(DATA_DIR,'BlensorResult_val'), ins_extension='.pgm',flag_rotation_aug=True,tfrecords_filename='val.tfrecords')
     print("base %d" % train_dataset.base)
     return train_dataset
  
-  tflist = [None] * 9
+  tflist = [None] * 4
 
   print("starting") 
   pool = Pool(30)
   
-  idlist = [i for i in range(9)]
+  idlist = [i for i in range(4)]
   
   for i, data in enumerate(pool.imap(data_base,idlist)):
     tflist[i] = data  
   pool.close()
   
-  pool = Pool(30)
+  pool = Pool(17)
   
   for i, data in enumerate(pool.imap(tfrecords_single,tflist)):
     print(i)
