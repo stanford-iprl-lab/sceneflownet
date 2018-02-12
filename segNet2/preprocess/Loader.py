@@ -11,36 +11,15 @@ import skimage.measure
 from multiprocessing import Pool
 import shutil
 import numpy
+from symmetry_issue import *
+from quaternionlib import *
+from sklearn.decomposition import PCA
 
 np.set_printoptions(precision=4,suppress=True,linewidth=300)
 
 h = 240
 w = 320
 
-def quaternion_matrix(quaternion):
-    """Return homogeneous rotation matrix from quaternion.
-    >>> M = quaternion_matrix([0.99810947, 0.06146124, 0, 0])
-    >>> numpy.allclose(M, rotation_matrix(0.123, [1, 0, 0]))
-    True
-    >>> M = quaternion_matrix([1, 0, 0, 0])
-    >>> numpy.allclose(M, numpy.identity(4))
-    True
-    >>> M = quaternion_matrix([0, 1, 0, 0])
-    >>> numpy.allclose(M, numpy.diag([1, -1, -1, 1]))
-    True
-    """
-    _EPS = np.finfo(float).eps * 4.0
-    q = np.array(quaternion, dtype=np.float64, copy=True)
-    n = np.dot(q, q)
-    if n < _EPS:
-        return np.identity(4)
-    q *= math.sqrt(2.0 / n)
-    q = np.outer(q, q)
-    return np.array([
-        [1.0-q[2, 2]-q[3, 3],     q[1, 2]-q[3, 0],     q[1, 3]+q[2, 0], 0.0],
-        [    q[1, 2]+q[3, 0], 1.0-q[1, 1]-q[3, 3],     q[2, 3]-q[1, 0], 0.0],
-        [    q[1, 3]-q[2, 0],     q[2, 3]+q[1, 0], 1.0-q[1, 1]-q[2, 2], 0.0],
-        [                0.0,                 0.0,                 0.0, 1.0]])
 
 def quaternion_from_matrix(matrix,isprecise=False):
     M = numpy.array(matrix, dtype=numpy.float64, copy=False)[:4, :4]
@@ -118,41 +97,6 @@ def tran_rot(filepath):
   return tran,rot
 
 
-#def rotmatrix_angleaxis(rot):
-#  angleaxis = np.zeros((3,)) 
-#  angleaxis[0] = rot[2,1] - rot[1,2]
-#  angleaxis[1] = rot[0,2] - rot[2,0]
-#  angleaxis[2] = rot[1,0] - rot[0,1]
-#  angleaxis = angleaxis / (np.linalg.norm(angleaxis) + 0.000001)
-#  tmp = (rot[0,0] + rot[1,1] + rot[2,2] - 1) * 0.5
-#  if tmp > 1.0:
-#    tmp = 1.0
-#  elif tmp < -1.0:
-#    tmp = -1.0
-#  angle = np.arccos( tmp )
-#  angleaxis *= angle
-#  assert(np.all(np.logical_not(np.isnan(angleaxis))))
-#  return angleaxis
-
-
-#def angleaxis_rotmatrix(angleaxis):
-#  angle = np.linalg.norm(angleaxis)
-#  axis = angleaxis / (angle + 0.000001)
-#  c = np.cos(angle)
-#  v = 1 - c
-#  s = np.sin(angle)
-#  rot = np.zeros((3,3))
-#  rot[0,0] = axis[0] ** 2 * v + c
-#  rot[0,1] = axis[0] * axis[1] * v - axis[2] * s
-#  rot[0,2] = axis[0] * axis[2] * v + axis[1] * s
-#  rot[1,0] = axis[0] * axis[1] * v + axis[2] * s
-#  rot[1,1] = axis[1] ** 2 * v + c
-#  rot[1,2] = axis[1] * axis[2] * v - axis[0] * s
-#  rot[2,0] = axis[0] * axis[2] * v - axis[1] * s
-#  rot[2,1] = axis[1] * axis[2] * v + axis[0] * s
-#  rot[2,2] = axis[2] ** 2 * v + c
-#  return rot
-
 
 #def load_transformation(top_dir):
 #  transl_file = os.path.join(top_dir,'translation.npz')
@@ -163,6 +107,7 @@ def tran_rot(filepath):
 #  rot = np.load(rot_file)['rot']
 #  return transl, rot
 
+fa = open('symmetry_example.txt','a+')
 
 def cal_transformation(top_dir):
   pgm_filepath = [line for line in os.listdir(top_dir) if line.endswith('.pgm') and line.startswith('frame80')]
@@ -209,13 +154,14 @@ def cal_transformation(top_dir):
   transformation_translation = np.zeros((h,w,3))
   
 
+  symmetry_top_dir = '/home/lins/Symmetry'
   for instance_id in frame2_id_list:
     frame2_pid = frame2_id == instance_id
     frame2_pid = frame2_pid.reshape((240,320))
     frame1_pid = frame1_id == instance_id
     frame1_pid = frame1_pid.reshape((240,320))
 
-    if instance_id > 0: 
+    if instance_id > 0:
       frame1_tran, frame1_rot = tran_rot(os.path.join(top_dir,'frame20_'+model_ids[int(instance_id)-1]))
       frame2_tran, frame2_rot = tran_rot(os.path.join(top_dir,'frame80_'+model_ids[int(instance_id)-1]))
       R12 = frame1_rot.dot(np.linalg.inv(frame2_rot))
@@ -229,6 +175,57 @@ def cal_transformation(top_dir):
       rot[2,1] *= -1.0
       
       quater = quaternion_from_matrix(rot)
+
+      instance_center = np.mean(frame2_center[frame2_pid],axis=0)
+      tran1 = quaternion_rotation(quater,instance_center)
+
+      cate,md5 = model_ids[int(instance_id)-1].split('_')[0:2]
+      if cate in cate_symmetry and md5 not in cate_except[cate]:
+        symmetry_file = os.path.join(symmetry_top_dir,cate,md5+'.generator')
+        if os.path.exists(symmetry_file): 
+          symmetry_line = [line for line in open(symmetry_file) if line.startswith('C')]
+          if len(symmetry_line) > 0: 
+            print(cate+' '+md5)
+            print(symmetry_line)    
+            for sline in symmetry_line:
+              ssline = sline.strip().split() 
+              if len(ssline) > 1:
+                Cname,Cn,Rx,Ry,Rz = ssline
+                Cn = float(Cn)
+                Raxis = np.array([float(Rx),float(Ry),float(Rz)]).astype(np.float64)
+                Raxis = frame2_rot.dot(Raxis) 
+                Raxis = R.T.dot(Raxis)
+                Raxis_norm = np.linalg.norm(Raxis)
+                Raxis = Raxis / Raxis_norm
+                Raxis[2] *= -1.0
+                print(Raxis)
+                quater,quater_3 = quaternion_shrink(quater,Raxis,Cn)
+                if Cn >= 20:
+                  print("c20 quater changed!")
+                  quater = quater_3 
+              else:
+                assert 'Cylinder' in ssline
+                _, Rc2 = angle_axis_from_quaternion(quater)
+                quater,quater_3 = quaternion_shrink(quater,Rc2,2)
+      
+            tran2 = quaternion_rotation(quater,instance_center)
+            tran = tran + tran1 - tran2
+
+            if 0:
+              objf20 = frame1_xyz[frame1_pid]
+              objf80 = frame2_xyz[frame2_pid]
+              p20 = objf20
+              p80 = objf80
+              if len(p20) > 0:
+          #p80 = p80.dot(rot.T) 
+                p80_n = quaternion_rotation(quater,p80)
+                p80_n = p80_n + tran
+                mayalab.points3d(p20[:,0],p20[:,1],p20[:,2],color=(0,1,0),mode='sphere')
+                mayalab.points3d(p80_n[:,0],p80_n[:,1],p80_n[:,2],color=(0,0,1),mode='sphere')
+                mayalab.points3d(p80[:,0],p80[:,1],p80[:,2],color=(1,0,0),mode='sphere') 
+                mayalab.show()
+
+
       transformation_translation[frame2_pid] = tran
       transformation_rot[frame2_pid] = quater
   
@@ -332,32 +329,6 @@ def cal_flow(top_dir,frame2_input_xyz_file, transformation_file, frame1_id_file,
   flow = flow + transl - frame2_input_xyz
   print(flow.shape)
 
-  #for frame_id in frame2_id_unique:
-  #  if frame_id > 0:
-  #     model_id = frame2_id == frame_id
-  #     transl_model = np.mean(transl[model_id],axis=0)
-  #     quater_model = np.mean(quater[model_id],axis=0)
-  #     rot_matrix = quaternion_matrix(quater_model)[0:3,0:3]
-  #     frame2_input = frame2_input_xyz[model_id]
-  #     flow_tmp = rot_matrix.dot(frame2_input.T).T
-
-  #     w1, x1, y1, z1 = quater_model#rot_quaternion, axis=-1)
-  #     x2, y2, z2  = frame2_input[:,0],frame2_input[:,1],frame2_input[:,2]
-
-  #     wm =         - x1 * x2 - y1 * y2 - z1 * z2
-  #     xm = w1 * x2           + y1 * z2 - z1 * y2
-  #     ym = w1 * y2           + z1 * x2 - x1 * z2
-  #     zm = w1 * z2           + x1 * y2 - y1 * x2
-
-  #     x = -wm * x1 + xm * w1 - ym * z1 + zm * y1
-  #     y = -wm * y1 + ym * w1 - zm * x1 + xm * z1
-  #     z = -wm * z1 + zm * w1 - xm * y1 + ym * x1
-
-  #     x_flow = np.stack((x,y,z),axis=-1)
-
-  #     flow_tmp = x_flow#flow_tmp + transl_model - frame2_input
-  #     flow[model_id] = flow_tmp
-  
   flow_file = os.path.join(top_dir,'flow.npz')
   np.savez(flow_file,flow=flow)
 
@@ -536,7 +507,7 @@ if __name__ == '__main__':
   top_dir = '/home/linshaonju/interactive-segmentation/Data/BlensorResult_train/'
   
   num = 30000
-  if 0:
+  if 1:
     filelist = []
     for i in xrange(0,num):
       top_d = os.path.join(top_dir,str(i))
