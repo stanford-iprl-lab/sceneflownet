@@ -9,7 +9,7 @@ import time
 import sys
 
 
-def loss(gt_xyz,pred_mask, pred_traj, gt_traj, pred_score, gt_score, pred_r, gt_r, pred_flow, gt_flow, batch_size, dim=3, h=240, w=320): 
+def loss(pred_quater, gt_quater, pred_transl, gt_transl,pred_mask, pred_traj, gt_traj, pred_score, gt_score, pred_r, gt_r, pred_flow, gt_flow, batch_size, dim=3, h=240, w=320): 
   obj_mask_origin = tf.greater(gt_traj[:,:,:,2],tf.zeros_like(gt_traj[:,:,:,2]))
   obj_mask_origin = tf.cast(obj_mask_origin,tf.float32)
   obj_mask_1  = tf.reshape(obj_mask_origin,[-1,h,w,1])
@@ -24,7 +24,9 @@ def loss(gt_xyz,pred_mask, pred_traj, gt_traj, pred_score, gt_score, pred_r, gt_
 
   loss_boundary = tf.reduce_sum(tf.squared_difference(gt_r, pred_r)*obj_mask_1)/(tf.reduce_sum(obj_mask_1) + 0.000001)
   loss_flow = tf.reduce_mean(tf.squared_difference(pred_flow,gt_flow))
-   
+  loss_transl = tf.reduce_mean(tf.squared_difference(pred_transl,gt_transl))
+  loss_quater = tf.reduce_mean(tf.reduce_sum(-(pred_quater * gt_quater),3))
+    
   loss_variance = 0.0
   loss_violation = 0.0
   
@@ -78,4 +80,4 @@ def loss(gt_xyz,pred_mask, pred_traj, gt_traj, pred_score, gt_score, pred_r, gt_
 
     #loss_violation += tf.reduce_mean(tf.map_fn(instance_violation_loss,y))
 
-  return loss_boundary, loss_flow, loss_elem, loss_mask, loss_score
+  return loss_quater, loss_transl, loss_boundary, loss_flow, loss_elem, loss_mask, loss_score
