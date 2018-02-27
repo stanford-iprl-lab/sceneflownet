@@ -222,8 +222,8 @@ def resnet_v1_50(inputs,
   blocks = [
       resnet_utils.Block(
           'block1', bottleneck, [(256, 64, 1)] * 2 + [(256, 64, 2)]),
-      resnet_utils.Block(
-          'block2', bottleneck, [(512, 128, 1)] * 3 + [(512, 128, 2)]),
+#      resnet_utils.Block(
+#          'block2', bottleneck, [(512, 128, 1)] * 3 + [(512, 128, 2)]),
 #      resnet_utils.Block(
 #          'block3', bottleneck, [(1024, 256, 1)] * 5 + [(1024, 256, 2)]),
 #      resnet_utils.Block(
@@ -235,3 +235,95 @@ def resnet_v1_50(inputs,
 resnet_v1_50.default_image_size = resnet_v1.default_image_size
 
 
+
+def resnet_v1_50_v2(inputs,
+                 num_classes=None,
+                 is_training=True,
+                 global_pool=False,
+                 output_stride=None,
+                 reuse=None,
+                 scope='resnet_v1_50'):
+  """ResNet-50 model of [1]. See resnet_v1() for arg and return description."""
+  blocks = [
+      resnet_utils.Block(
+          'block1', bottleneck, [(256, 64, 1)] * 2 + [(256, 64, 2)]),
+      resnet_utils.Block(
+          'block2', bottleneck, [(512, 128, 1)] * 3),
+#      resnet_utils.Block(
+#          'block3', bottleneck, [(1024, 256, 1)] * 5 + [(1024, 256, 2)]),
+#      resnet_utils.Block(
+#          'block4', bottleneck, [(2048, 512, 1)] * 3)
+  ]
+  return resnet_v1(inputs, blocks, num_classes, is_training,
+                   global_pool=global_pool, output_stride=output_stride,
+                   include_root_block=True, reuse=reuse, scope=scope)
+resnet_v1_50.default_image_size = resnet_v1.default_image_size
+
+
+def resnet_v1_101(inputs,
+                  num_classes=None,
+                  is_training=True,
+                  global_pool=False,
+                  output_stride=None,
+                  reuse=None,
+                  scope='resnet_v1_101'):
+  """ResNet-101 model of [1]."""
+  blocks = [
+      resnet_utils.Block(
+          'block1', bottleneck, [(256, 64, 1)] * 2 + [(256, 64, 2)]),
+      resnet_utils.Block(
+          'block2', bottleneck, [(512, 128, 1)] * 3 + [(512, 128, 2)]),
+      resnet_utils.Block(
+          'block3', bottleneck, [(1024, 256, 1)] * 22 + [(1024, 256, 2)]),
+      resnet_utils.Block(
+          'block4', bottleneck, [(2048, 512, 1)] * 3)
+  ]
+  return resnet_v1(inputs, blocks, num_classes, is_training,
+                   global_pool=global_pool, output_stride=output_stride,
+                   include_root_block=True, reuse=reuse, scope=scope)
+resnet_v1_101.default_image_size = resnet_v1.default_image_size
+
+def resnet_v1_152(inputs,
+                  num_classes=None,
+                  is_training=True,
+                  global_pool=True,
+                  output_stride=None,
+                  reuse=None,
+                  scope='resnet_v1_152'):
+  """ResNet-152 model of [1]. See resnet_v1() for arg and return description."""
+  blocks = [
+      resnet_utils.Block(
+          'block1', bottleneck, [(256, 64, 1)] * 2 + [(256, 64, 2)]),
+      resnet_utils.Block(
+          'block2', bottleneck, [(512, 128, 1)] * 7 + [(512, 128, 2)]),
+      resnet_utils.Block(
+          'block3', bottleneck, [(1024, 256, 1)] * 35 + [(1024, 256, 2)]),
+      resnet_utils.Block(
+          'block4', bottleneck, [(2048, 512, 1)] * 3)]
+  return resnet_v1(inputs, blocks, num_classes, is_training,
+                   global_pool=global_pool, output_stride=output_stride,
+                   include_root_block=True, reuse=reuse, scope=scope)
+resnet_v1_152.default_image_size = resnet_v1.default_image_size
+
+
+def resnet_v1_200(inputs,
+                  num_classes=None,
+                  is_training=True,
+                  global_pool=True,
+                  output_stride=None,
+                  reuse=None,
+                  scope='resnet_v1_200'):
+  """ResNet-200 model of [2]. See resnet_v1() for arg and return description."""
+  blocks = [
+      resnet_utils.Block(
+          'block1', bottleneck, [(256, 64, 1)] * 2 + [(256, 64, 2)]),
+      resnet_utils.Block(
+          'block2', bottleneck, [(512, 128, 1)] * 23 + [(512, 128, 2)]),
+      resnet_utils.Block(
+          'block3', bottleneck, [(1024, 256, 1)] * 35 + [(1024, 256, 2)]),
+      resnet_utils.Block(
+          'block4', bottleneck, [(2048, 512, 1)] * 3)]
+  return resnet_v1(inputs, blocks, num_classes, is_training,
+                   global_pool=global_pool, output_stride=output_stride,
+                   include_root_block=True, reuse=reuse, scope=scope)
+resnet_v1_200.default_image_size = resnet_v1.default_image_size

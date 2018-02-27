@@ -5,7 +5,7 @@ import functools
 
 import tensorflow as tf
 import sys
-sys.path.append('/home/lins/interactive-segmentation/segNet2/models')
+sys.path.append('/home/linshaonju/interactive-segmentation/segNet2/models')
 
 import resnet_v1
 from resnet_v1 import resnet_v1_50 as resnet50
