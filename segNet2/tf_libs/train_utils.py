@@ -9,7 +9,7 @@ import tensorflow as tf
 
 slim = tf.contrib.slim
 FLAGS_checkpoint_exclude_scopes=None
-FLAGS_checkpoint_include_scopes='resnet_v1_50'
+FLAGS_checkpoint_include_scopes=None #'resnet_v1_50'
 def get_var_list_to_restore_by_name(var_name=None):
   """Choose which vars to restore, ignore vars by setting --checkpoint_exclude_scopes """
 

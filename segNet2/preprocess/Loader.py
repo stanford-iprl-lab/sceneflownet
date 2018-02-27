@@ -13,7 +13,6 @@ import shutil
 import numpy
 from symmetry_issue import *
 from quaternionlib import *
-from sklearn.decomposition import PCA
 
 np.set_printoptions(precision=4,suppress=True,linewidth=300)
 
@@ -154,7 +153,7 @@ def cal_transformation(top_dir):
   transformation_translation = np.zeros((h,w,3))
   
 
-  symmetry_top_dir = '/home/lins/Symmetry'
+  symmetry_top_dir = '/home/linshaonju/Symmetry'
   for instance_id in frame2_id_list:
     frame2_pid = frame2_id == instance_id
     frame2_pid = frame2_pid.reshape((240,320))
@@ -217,7 +216,6 @@ def cal_transformation(top_dir):
               p20 = objf20
               p80 = objf80
               if len(p20) > 0:
-          #p80 = p80.dot(rot.T) 
                 p80_n = quaternion_rotation(quater,p80)
                 p80_n = p80_n + tran
                 mayalab.points3d(p20[:,0],p20[:,1],p20[:,2],color=(0,1,0),mode='sphere')
@@ -327,7 +325,6 @@ def cal_flow(top_dir,frame2_input_xyz_file, transformation_file, frame1_id_file,
 
   flow = np.stack((x,y,z),axis=-1)
   flow = flow + transl - frame2_input_xyz
-  print(flow.shape)
 
   flow_file = os.path.join(top_dir,'flow.npz')
   np.savez(flow_file,flow=flow)
@@ -349,10 +346,6 @@ def raw_cal_flow(total):
   top_dir, frame2_input_xyz_file, frame1_id_file, frame2_id_file = total.split('#')
   cal_flow(top_dir,frame2_input_xyz_file, top_dir, frame1_id_file, frame2_id_file)
 
-def load_predicted_frame1_feat(top_d):
-  pred_file = os.path.join(top_d,'pred_frame1_xyz.npz') 
-  pred = np.load(pred_file)['flow']
-  return pred 
 
 def cal_score(top_dir,inputfilename,gtfilename):
   xyz = load_xyz(inputfilename)[:,:,0:2]
@@ -504,33 +497,38 @@ def load_end_center(end_center_file):
   return tmp  
 
 if __name__ == '__main__':
-  top_dir = '/home/linshaonju/interactive-segmentation/Data/BlensorResult_train/'
+  top_dir = '/home/linshaonju/interactive-segmentation/Data/BlensorResult_test/'
   
-  num = 30000
+  num = 8500
   if 1:
     filelist = []
     for i in xrange(0,num):
       top_d = os.path.join(top_dir,str(i))
       if os.path.exists(top_d):
-        if not os.path.exists(os.path.join(top_d,'frame80_labeling_model_id.npz')) or not os.path.exists(os.path.join(top_d,'frame20_labeling_model_id.npz')) or not os.path.exists(os.path.join(top_d,'frame80_labeling.npz')) or not os.path.exists(os.path.join(top_d,'frame20_labeling.npz')):
+        #if not os.path.exists(os.path.join(top_d,'frame80_labeling_model_id.npz')) or not os.path.exists(os.path.join(top_d,'frame20_labeling_model_id.npz')) or not os.path.exists(os.path.join(top_d,'frame80_labeling.npz')) or not os.path.exists(os.path.join(top_d,'frame20_labeling.npz')):
+         # print(top_d)
+          #shutil.rmtree(top_d)
+        #else:
+        filelist.append(top_d)
+        flow_file = os.path.join(top_d,'flow.npz')
+        flow = np.load(flow_file)['flow']
+        if np.any(np.isnan(flow)):
           print(top_d)
-          shutil.rmtree(top_d)
-        else:
-          filelist.append(top_d)
-        if os.path.exists(os.path.join(top_d,'translation.npz')):
-          os.remove(os.path.join(top_d,'translation.npz'))
-        if os.path.exists(os.path.join(top_d,'rotation.npz')):
-          os.remove(os.path.join(top_d,'rotation.npz'))
-        if os.path.exists(os.path.join(top_d,'pred_frame1_xyz.npz')):
-          os.remove(os.path.join(top_d,'pred_frame1_xyz.npz'))
-        if os.path.exists(os.path.join(top_d,'cc.npz')):
-          os.remove(os.path.join(top_d,'cc.npz'))
+        #cal_transformation(top_d)
+        #if os.path.exists(os.path.join(top_d,'translation.npz')):
+        #  os.remove(os.path.join(top_d,'translation.npz'))
+        #if os.path.exists(os.path.join(top_d,'rotation.npz')):
+        #  os.remove(os.path.join(top_d,'rotation.npz'))
+        #if os.path.exists(os.path.join(top_d,'pred_frame1_xyz.npz')):
+        #  os.remove(os.path.join(top_d,'pred_frame1_xyz.npz'))
+        #if os.path.exists(os.path.join(top_d,'cc.npz')):
+        #  os.remove(os.path.join(top_d,'cc.npz'))
  
 
-    pool = Pool(200)
-    for i, data in enumerate(pool.imap(cal_transformation,filelist)):
-      print(i)
-    pool.close()
+    #pool = Pool(100)
+    #for i, data in enumerate(pool.imap(cal_transformation,filelist)):
+    #  print(i)
+    #pool.close()
 
    
   if 0:
@@ -547,22 +545,21 @@ if __name__ == '__main__':
           total = top_d + '#' + frame2_input_xyz_file + '#' +frame1_id_file + '#' + frame2_id_file 
           if os.path.exists(frame1_id_file) and os.path.exists(frame2_id_file):
             filelist.append(total)
-    pool = Pool(200)
+    pool = Pool(150)
     for i, data in enumerate(pool.imap(raw_cal_flow,filelist)):
       print(i)
  
     pool.close()
     print("pred scene flow")
   
-  if 1: 
+  if 0: 
     filelist = []
     for i in xrange(0,num):
       top_d = os.path.join(top_dir,str(i))
       if os.path.exists(top_d):
         print(top_d)
         filelist.append(top_d)
-        #cal_ending_traj(top_d)
-    pool = Pool(200)
+    pool = Pool(150)
     for i , data in enumerate(pool.imap(cal_ending_traj,filelist)):
       print(i)
     pool.close()
@@ -588,13 +585,13 @@ if __name__ == '__main__':
  
     pool.close()
 
-  if 1:
+  if 0:
     filelist = []
     for i in xrange(0,num):
       top_d = os.path.join(top_dir,str(i))
       if os.path.exists(top_d):
         filelist.append(top_d)
-    pool = Pool(200)
+    pool = Pool(150)
     for i, data in enumerate(pool.imap(cal_boundary,filelist)):
       print(i)
       print(filelist[i])
