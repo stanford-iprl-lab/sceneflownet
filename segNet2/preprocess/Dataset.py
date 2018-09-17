@@ -20,7 +20,6 @@ import tensorflow as tf
 
 #from matplotlib import pyplot as plt
 
-
 def _int64_feature(value):
   return tf.train.Feature(int64_list=tf.train.Int64List(value=[value]))
 
@@ -98,6 +97,7 @@ class Dataset(object):
         self._outs_path['rot'].append(os.path.join(ins_sub_dir,outs_['rot'][0]))
  
         self._ins_ids.append(ins_sub_dir.split('/')[-1])
+        #print("%s from ins_sub_dir while %d idline" % (ins_sub_dir.split('/')[-1],id_line))
 
     self.num_instance = len(self._ins_path['1framexyz'])
     print("self.num_instances")
@@ -105,7 +105,7 @@ class Dataset(object):
  	
 
 def tfrecords_single(db):
-    total_path = os.path.join(DATA_DIR,'Tfrecords_val',str(db.base)+db.tfrecords_filename)
+    total_path = os.path.join(DATA_DIR,'Tfrecords_test',str(db.base)+db.tfrecords_filename)
     
     writer =  tf.python_io.TFRecordWriter(total_path)
     print(total_path)  
@@ -114,6 +114,7 @@ def tfrecords_single(db):
    
     low = int(db.base * db.base_step)
     high = min((db.base+1) * db.base_step,db.num_instance)
+    print('low:%f high:%f' % (low,high))
     for idx in xrange(low,high):
       print(db._ins_path['1framexyz'][idx])
       ins_['1framexyz'] = load_xyz(db._ins_path['1framexyz'][idx]).astype(np.float32)
@@ -127,10 +128,12 @@ def tfrecords_single(db):
       outs_['end_center'] = load_end_center(db._outs_path['end_center'][idx]).astype(np.float32)
       outs_['transl'] = load_transl(db._outs_path['transl'][idx]).astype(np.float32)
       outs_['rot'] = load_rot(db._outs_path['rot'][idx]).astype(np.float32)
+      #outs_['rigidflowmask'] = load_rigidflowmask(db._outs_path['top_dir'][idx]).astype(np.float32)
 
       instance_id = int(db._ins_ids[idx])
       print('instance_id %d ' % (instance_id))
-      print('%d / %d' % (idx,high))
+      #print("%s top_dir" % (db._outs_path['top_dir'][idx]))
+      #print('%d / %d' % (idx,high))
 
        
       ins_1frame_rgb = ins_['1framergb'].tostring()
@@ -144,6 +147,7 @@ def tfrecords_single(db):
       outs_end_center = outs_['end_center'].tostring()
       outs_transl = outs_['transl'].tostring()
       outs_rot = outs_['rot'].tostring()
+     # outs_rigidflowmask = outs_['rigidflowmask'].tostring()
 
       example = tf.train.Example(features=tf.train.Features(feature={
           'instance_id':_int64_feature(instance_id),
@@ -157,7 +161,8 @@ def tfrecords_single(db):
           'outs_end_center':_bytes_feature(outs_end_center),
           'outs_transl':_bytes_feature(outs_transl),
           'outs_rot':_bytes_feature(outs_rot),
-          'outs_flow':_bytes_feature(outs_flow)
+          'outs_flow':_bytes_feature(outs_flow),
+       #   'outs_rigidflowmask':_bytes_feature(outs_rigidflowmask),
         }))
 
       writer.write(example.SerializeToString())
@@ -166,24 +171,22 @@ def tfrecords_single(db):
 
 
 if __name__ == '__main__':
-  from data_preparing import train_val_test_list 
+  from data_preparing import train_val_test_list  
   def data_base(i):
-    train_dataset = Dataset(i,train_val_test_list._train, ins_dir=os.path.join(DATA_DIR,'BlensorResult_val'), ins_extension='.pgm',flag_rotation_aug=True,tfrecords_filename='val.tfrecords')
+    train_dataset = Dataset(i,train_val_test_list._train, ins_dir=os.path.join(DATA_DIR,'BlensorResult_test'), ins_extension='.pgm',flag_rotation_aug=True,tfrecords_filename='test.tfrecords')
     print("base %d" % train_dataset.base)
     return train_dataset
  
-  tflist = [None] * 4
-
+  tflist = [None] * 8
   print("starting") 
-  pool = Pool(30)
+  pool = Pool(8)
   
-  idlist = [i for i in range(4)]
+  idlist = [i for i in range(8)]
   
   for i, data in enumerate(pool.imap(data_base,idlist)):
     tflist[i] = data  
-  pool.close()
-  
-  pool = Pool(17)
+  pool.close() 
+  pool = Pool(8)
   
   for i, data in enumerate(pool.imap(tfrecords_single,tflist)):
     print(i)
