@@ -5,7 +5,7 @@ import sys
 from nets_factory import get_network
 import resnet_v1 as resnet_v1
 sys.path.append('/home/linshaonju/interactive-segmentation/segNet2/src')
-from correlation import correlation
+#from correlation import correlation
 
 def encoder(x,reuse=False):
   with tf.variable_scope("encodexyz"):
