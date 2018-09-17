@@ -173,7 +173,7 @@ class Experiment:
     else:
       self.batch_size = self.flags.test_batch_size
       self.num_instance = self.flags.num_test_model
-      self.build_model(tfrecords_filename=self.tfrecord_val_list,num_epochs=1)
+      self.build_model(tfrecords_filename=self.tfrecord_test_list,num_epochs=1)
 
     self.num_batch = int(self.num_instance / self.batch_size)
     self.loss_op()
@@ -369,7 +369,7 @@ class Experiment:
     self.sess.close()
 
   def result_op(self,save=True):
-    if 1:  
+    if 0:  
       self.predv['frame2_mask_truncated'],\
       self.predv['flow_masked'],\
       self.predv['frame2_boundary_masked'], \
@@ -386,7 +386,7 @@ class Experiment:
       self.predv['final_seg'], self.predv['final_instance'], self.predv['final_score'] = infer_seg(self.predv['instance_center'],self.predv['instance_boundary'],self.predv['instance_score'],self.predv['traj_masked'][i],self.predv['frame2_mask_truncated'][i])
 
       #self.instance_id])
-    if 0:
+    if 1:
       self.predv['frame2_mask_truncated'],\
       self.predv['flow_masked'],\
       self.predv['flow'],\
@@ -422,6 +422,7 @@ class Experiment:
           np.savez(os.path.join(tmp_path,'gt'),seg=self.gtv['frame2_xyz'][i][:,:,2])
           np.savetxt(os.path.join(tmp_path,'pred.txt'),self.predv['final_score'],fmt='%.8f')
           final_seg = np.zeros((240,320,1))
+          #if len(self.predv['final_instance']) < 3:
           print("num of %d objecct" % (len(self.predv['final_instance'])))
           for j in range(len(self.predv['final_instance'])):
             final_seg += self.predv['final_instance'][j] * float(j+1)
@@ -453,6 +454,7 @@ class Experiment:
     start_time = time.time() 
     for ii in xrange(self.num_batch):
       self.result_op()
+      print(ii)
     end_time =  time.time()
     print('Num example %d last %f second' % (self.num_batch, (end_time-start_time)))
     print('num_batch %d' % (self.num_batch))
@@ -468,7 +470,7 @@ class Experiment:
     #best_epoch = self.validate(43,44)#self.flags.num_epochs)
     #self.log.log_plotting(['transl','rot','total_loss','flow'])
     #self.test(best_epoch)
-    best_epoch = 42#best_epoch #self.flags.num_epochs - 1
+    best_epoch = 43#best_epoch #self.flags.num_epochs - 1
     self.save_result(best_epoch) 
     self.analysis(best_epoch)
 
@@ -498,10 +500,10 @@ class Experiment:
       shutil.rmtree(self.result_save_epoch_top_dir)
       os.mkdir(self.result_save_epoch_top_dir)
 
-    for model_id in id_list:
-       tmp_path = os.path.join(self.result_save_epoch_top_dir,str(model_id))
-       if not os.path.exists(tmp_path):
-         os.mkdir(tmp_path)
-       else:
-         shutil.rmtree(tmp_path)
-         os.mkdir(tmp_path)
+    #for model_id in id_list:
+    #   tmp_path = os.path.join(self.result_save_epoch_top_dir,str(model_id))
+    #   if not os.path.exists(tmp_path):
+    #     os.mkdir(tmp_path)
+    #   else:
+    #     shutil.rmtree(tmp_path)
+    #     os.mkdir(tmp_path)

@@ -173,7 +173,7 @@ class Experiment:
     else:
       self.batch_size = self.flags.test_batch_size
       self.num_instance = self.flags.num_test_model
-      self.build_model(tfrecords_filename=self.tfrecord_val_list,num_epochs=1)
+      self.build_model(tfrecords_filename=self.tfrecord_test_list,num_epochs=1)
 
     self.num_batch = int(self.num_instance / self.batch_size)
     self.loss_op()
@@ -493,10 +493,10 @@ class Experiment:
       shutil.rmtree(self.result_save_epoch_top_dir)
       os.mkdir(self.result_save_epoch_top_dir)
 
-    for model_id in id_list:
-       tmp_path = os.path.join(self.result_save_epoch_top_dir,str(model_id))
-       if not os.path.exists(tmp_path):
-         os.mkdir(tmp_path)
-       else:
-         shutil.rmtree(tmp_path)
-         os.mkdir(tmp_path)
+    #for model_id in id_list:
+    #   tmp_path = os.path.join(self.result_save_epoch_top_dir,str(model_id))
+    #   if not os.path.exists(tmp_path):
+    #     os.mkdir(tmp_path)
+    #   else:
+    #     shutil.rmtree(tmp_path)
+    #     os.mkdir(tmp_path)

@@ -78,6 +78,9 @@ def read_and_decode(filename_queue):
 
 
 def inputs(batch_size,num_epochs,tfrecords_filename):
+  print("batch_size")
+  print(batch_size)
+
   with tf.name_scope('inputf'):
     filename_queue = tf.train.string_input_producer(
       tfrecords_filename, num_epochs=num_epochs)
@@ -118,9 +121,9 @@ def inputs(batch_size,num_epochs,tfrecords_filename):
          gt_trans_,\
          gt_quater_,\
          instance_id_],\
-      batch_size=batch_size, num_threads=10,
-      capacity = 10 + 3 * batch_size,
-      min_after_dequeue=10)
+      batch_size=batch_size, num_threads=1,
+      capacity =2 * batch_size,
+      min_after_dequeue=1)
    
     return in_1frame_xyz, \
            in_1frame_rgb, \
