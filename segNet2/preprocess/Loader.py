@@ -523,8 +523,12 @@ def load_rigidflowmask(top_dir):
   return tmp
 
 if __name__ == '__main__':
-  "Annotate the ground truth dataset. "
-  top_dir = '/home/linshaonju/interactive-segmentation/Data/BlensorResult_seq'
+  "Annotate the ground truth dataset. Follow the order
+   Step 1. Calculate translation and rotation
+   Step 2. Calculate the trajectory ending point
+   Step 3. Calculate the distances between trajectories and score"
+
+  top_dir = ''
   
   num = 10000
   if 1:
