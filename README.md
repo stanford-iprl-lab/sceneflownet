@@ -8,5 +8,5 @@ tensorflow-gpu==1.2.0
 
 ### Installing
 ```
-cd sceneflownet; make
+cd segNet2; make
 ```
