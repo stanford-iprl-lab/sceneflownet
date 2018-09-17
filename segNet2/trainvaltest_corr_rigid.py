@@ -23,9 +23,9 @@ tf.set_random_seed(seed)
 from tf_libs.tf_logging import LOG
 from tf_libs.tfrecords import inputs
 from evaluation.metric import IoU
-from lossf.loss_corr import loss
+from lossf.loss_corr_rigid import loss
 from inference.infer import nms,infer_seg
-experiment_name = 'sceneflownet_corr'
+experiment_name = 'sceneflownet_corr_rigid'
 
 MODEL_SAVE_DIR = os.path.join(BASE_DIR,'saved_models')
 RESULT_SAVE_DIR = os.path.join(BASE_DIR,'saved_results')
@@ -39,20 +39,20 @@ parser.add_argument('--num_epochs',type=int,default=400,help='Number of epochs t
 parser.add_argument('--train_batch_size',type=int,default=12,help='Number of models within a batch.')
 parser.add_argument('--val_batch_size',type=int,default=20,help='Number of models within a batch.')
 parser.add_argument('--test_batch_size',type=int,default=1,help='Number of models within a batch.')
-parser.add_argument('--num_train_model',type=int,default=24994,help='Number of models within a batch.')#29172
-parser.add_argument('--num_val_model',type=int,default=4000,help='Number of models within a batch.')#33603896
-parser.add_argument('--num_test_model',type=int,default=10000,help='Number of models within a batch.')
+parser.add_argument('--num_train_model',type=int,default=94,help='Number of models within a batch.')#24994
+parser.add_argument('--num_val_model',type=int,default=3360,help='Number of models within a batch.')#3896
+parser.add_argument('--num_test_model',type=int,default=8000,help='Number of models within a batch.')
 parser.add_argument('--max_model_to_keep',type=int,default=400,help='max saved models')
 parser.add_argument('--log_dir',default=os.path.join(LOGGING_DIR,experiment_name),help='folder to save logging infor')
-parser.add_argument('--train_tfrecords_filename',default=os.path.join(DATA_DIR,'Tfrecords_test'),help='directory to contain train tfrecord files')
-parser.add_argument('--val_tfrecords_filename',default=os.path.join(DATA_DIR,'Tfrecords_test'),help='directory to contain train tfrecord files')
-parser.add_argument('--test_tfrecords_filename',default=os.path.join(DATA_DIR,'Tfrecords_seq'),help='directory to contain train tfrecord files')
+parser.add_argument('--train_tfrecords_filename',default=os.path.join(DATA_DIR,'Tfrecords_train'),help='directory to contain train tfrecord files')
+parser.add_argument('--val_tfrecords_filename',default=os.path.join(DATA_DIR,'Tfrecords_val'),help='directory to contain train tfrecord files')
+parser.add_argument('--test_tfrecords_filename',default=os.path.join(DATA_DIR,'Tfrecords_test'),help='directory to contain train tfrecord files')
 parser.add_argument('--result_save_dir',default=os.path.join(RESULT_SAVE_DIR,experiment_name)+'/',help='Directory to save the result')
 
 FLAGS = parser.parse_args()
 dim = 3
 
-from tf_libs.sceneflownet_experiment_corr import Experiment
+from tf_libs.sceneflownet_experiment_corr_rigid import Experiment
 
 if not os.path.exists(FLAGS.log_dir):
   os.mkdir(FLAGS.log_dir)
