@@ -10,3 +10,5 @@ tensorflow-gpu==1.2.0
 ```
 cd segNet2; make
 ```
+## License
+This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details
