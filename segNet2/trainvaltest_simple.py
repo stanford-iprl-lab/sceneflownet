@@ -41,12 +41,12 @@ parser.add_argument('--val_batch_size',type=int,default=1,help='Number of models
 parser.add_argument('--test_batch_size',type=int,default=1,help='Number of models within a batch.')
 parser.add_argument('--num_train_model',type=int,default=24994,help='Number of models within a batch.')#29172
 parser.add_argument('--num_val_model',type=int,default=8200,help='Number of models within a batch.')#3360 
-parser.add_argument('--num_test_model',type=int,default=1000,help='Number of models within a batch.')
+parser.add_argument('--num_test_model',type=int,default=10000,help='Number of models within a batch.')
 parser.add_argument('--max_model_to_keep',type=int,default=400,help='max saved models')
 parser.add_argument('--log_dir',default=os.path.join(LOGGING_DIR,experiment_name),help='folder to save logging infor')
-parser.add_argument('--train_tfrecords_filename',default=os.path.join(DATA_DIR,'Tfrecords_train'),help='directory to contain train tfrecord files')
+parser.add_argument('--train_tfrecords_filename',default=os.path.join(DATA_DIR,'Tfrecords_test'),help='directory to contain train tfrecord files')
 parser.add_argument('--val_tfrecords_filename',default=os.path.join(DATA_DIR,'Tfrecords_test'),help='directory to contain train tfrecord files')
-parser.add_argument('--test_tfrecords_filename',default=os.path.join(DATA_DIR,'Tfrecords_test'),help='directory to contain train tfrecord files')
+parser.add_argument('--test_tfrecords_filename',default=os.path.join(DATA_DIR,'Tfrecords_seq'),help='directory to contain train tfrecord files')
 parser.add_argument('--result_save_dir',default=os.path.join(RESULT_SAVE_DIR,experiment_name)+'/',help='Directory to save the result')
 
 FLAGS = parser.parse_args()
