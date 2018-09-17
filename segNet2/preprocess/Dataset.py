@@ -97,7 +97,6 @@ class Dataset(object):
         self._outs_path['rot'].append(os.path.join(ins_sub_dir,outs_['rot'][0]))
  
         self._ins_ids.append(ins_sub_dir.split('/')[-1])
-        #print("%s from ins_sub_dir while %d idline" % (ins_sub_dir.split('/')[-1],id_line))
 
     self.num_instance = len(self._ins_path['1framexyz'])
     print("self.num_instances")
@@ -128,13 +127,9 @@ def tfrecords_single(db):
       outs_['end_center'] = load_end_center(db._outs_path['end_center'][idx]).astype(np.float32)
       outs_['transl'] = load_transl(db._outs_path['transl'][idx]).astype(np.float32)
       outs_['rot'] = load_rot(db._outs_path['rot'][idx]).astype(np.float32)
-      #outs_['rigidflowmask'] = load_rigidflowmask(db._outs_path['top_dir'][idx]).astype(np.float32)
 
       instance_id = int(db._ins_ids[idx])
       print('instance_id %d ' % (instance_id))
-      #print("%s top_dir" % (db._outs_path['top_dir'][idx]))
-      #print('%d / %d' % (idx,high))
-
        
       ins_1frame_rgb = ins_['1framergb'].tostring()
       ins_2frame_rgb = ins_['2framergb'].tostring()
@@ -147,7 +142,6 @@ def tfrecords_single(db):
       outs_end_center = outs_['end_center'].tostring()
       outs_transl = outs_['transl'].tostring()
       outs_rot = outs_['rot'].tostring()
-     # outs_rigidflowmask = outs_['rigidflowmask'].tostring()
 
       example = tf.train.Example(features=tf.train.Features(feature={
           'instance_id':_int64_feature(instance_id),
@@ -162,7 +156,6 @@ def tfrecords_single(db):
           'outs_transl':_bytes_feature(outs_transl),
           'outs_rot':_bytes_feature(outs_rot),
           'outs_flow':_bytes_feature(outs_flow),
-       #   'outs_rigidflowmask':_bytes_feature(outs_rigidflowmask),
         }))
 
       writer.write(example.SerializeToString())

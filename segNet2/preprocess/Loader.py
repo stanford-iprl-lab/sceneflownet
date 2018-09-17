@@ -494,34 +494,6 @@ def load_end_center(end_center_file):
   tmp = np.load(end_center_file)['end_center']
   return tmp  
 
-def cal_rigidflowmask(top_dir):
-  frame2_id = load_labeling(os.path.join(top_dir,'frame80_labeling_model_id.npz'))
-  frame1_id = load_labeling(os.path.join(top_dir,'frame20_labeling_model_id.npz'))
-  mask = np.zeros((240,320))
-  
-  frame2_id_list = np.unique(frame2_id)
-  frame1_id_list = np.unique(frame1_id)
-  count = 0
-  for instance_id in frame2_id_list:
-    if instance_id in frame1_id_list and instance_id > 0:
-       frame2_pid = frame2_id == instance_id
-       frame2_pid = frame2_pid.reshape((240,320))
-       mask[frame2_pid] = 1.0#instance_id
-    elif not instance_id in frame1_id_list:
-       count += 1
-  if count > 2:
-    print(count)
-    print(top_dir)
-    shutil.rmtree(top_dir)
-    return 1
-  else:
-    np.savez(os.path.join(top_dir,'rigidflowmask.npz'),rigidflowmask=mask)
-    return 0
-
-def load_rigidflowmask(top_dir):
-  tmp = np.load(os.path.join(top_dir,'rigidflowmask.npz'))['rigidflowmask']
-  return tmp
-
 if __name__ == '__main__':
   "Annotate the ground truth dataset. Follow the order
    Step 1. Calculate translation and rotation
