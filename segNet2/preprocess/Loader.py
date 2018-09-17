@@ -18,10 +18,6 @@ np.set_printoptions(precision=4,suppress=True,linewidth=300)
 h = 240
 w = 320
 
-def load_2m(top_dir):
-  tmp = np.load(top_dir)['labeling']
-  return tmp
-
 def quaternion_from_matrix(matrix,isprecise=False):
     M = numpy.array(matrix, dtype=numpy.float64, copy=False)[:4, :4]
     if isprecise:
@@ -94,7 +90,6 @@ def tran_rot(filepath):
       rot[idx,:] = np.array(tmp[0:3])
       tran[idx] = tmp[3]
   return tran,rot
-
 
 fa = open('symmetry_example.txt','a+')
 
@@ -212,7 +207,6 @@ def cal_transformation(top_dir):
                 mayalab.points3d(p80[:,0],p80[:,1],p80[:,2],color=(1,0,0),mode='sphere') 
                 mayalab.show()
 
-
       transformation_translation[frame2_pid] = tran
       transformation_rot[frame2_pid] = quater
   
@@ -232,36 +226,6 @@ def load_seg(filepath):
     print('sth is wrong!')
     return np.zeros((h,w,3))
   return seg
-
-def load_real_xyz(filename):
-  image_ = imread(filename) / 5000.0
-  print(image_.shape)
-  fx = 472.92840576171875  
-  fy = fx
-  width = 640
-  height = 480
-  nx,ny = (width,height) 
-  x_index = np.linspace(0,width-1,width)
-  y_index = np.linspace(0,height-1,height)
-  xx,yy = np.meshgrid(x_index,y_index)
-  xx -= float(width)/2
-  yy -= float(height)/2
-  xx /= fx
-  yy /= fy
-
-  cam_z = np.reshape(image_,(height, width))
-  cam_x = xx * cam_z
-  cam_y = yy * cam_z
-  image_z = cam_z
-  image_y = cam_y * -1.0
-  image_x = cam_x
-
-  zoom_scale = 0.5
-  image_x = scipy.ndimage.zoom(image_x, zoom_scale, order=1)
-  image_y = scipy.ndimage.zoom(image_y, zoom_scale, order=1)
-  image_z = scipy.ndimage.zoom(image_z, zoom_scale, order=1)
-  image = np.dstack((image_x,image_y,image_z))
-  return image 
 
  
 def load_xyz(filename):
@@ -301,7 +265,6 @@ def load_xyz(filename):
             image = np.dstack((image_x,image_y,image_z))
             return image
     return np.zeros((h,w,3))
-
 
 def load_flow(top_dir):
   tmp = os.path.join(top_dir,'flow.npz')
@@ -395,35 +358,7 @@ def raw_cal_score(total):
   top_dir,inputfilename, gtfilename = total.split('#')
   cal_score(top_dir,inputfilename,gtfilename)
 
-
 def cal_boundary(top_dir):
-   dist_image = np.zeros((240,320,1))
-   filepath = os.path.join(top_dir,'frame80_labeling.npz')
-   if not os.path.exists(filepath):
-     return
-   if not os.path.exists(os.path.join(top_dir,'end_center.npz')):
-     return
-   seg = load_seg(filepath)
-   end_center = np.load(os.path.join(top_dir,'end_center.npz'))['end_center']
-   feat = np.zeros((240,320,6))
-   feat[:,:,0:3] = seg
-   feat[:,:,3:6] = end_center
-
-   d2_image = np.reshape(feat,(-1,6))
-   idx_c = np.unique(d2_image,axis=0)
-   idx_c = [idx_c[i] for i in xrange(len(idx_c)) if idx_c[i][0] != 0.0 and idx_c[i][1] != 0.0 and idx_c[i][2] != 0.0]
-   d2_list = [i for i in xrange(len(idx_c))]
-   if len(idx_c) == 1:  
-     dist_image[seg[:,:,2] == idx_c[0][2]] = 0.02
-   elif len(idx_c) > 1:
-     for i_c in xrange(len(idx_c)):
-       dist = np.min(np.array([np.linalg.norm(idx_c[i_c] - idx_c[i]) for i in d2_list if i != i_c]))
-       dist_image[seg[:,:,2] == idx_c[i_c][2]] = dist / 10
-   boundary_file = os.path.join(top_dir,'boundary.npz')
-   np.savez(boundary_file,boundary=dist_image)
-
-
-def cal_boundary_(top_dir):
    dist_image = np.zeros((240,320,1))
    filepath = os.path.join(top_dir,'frame80_labeling.npz')
    if not os.path.exists(filepath):
@@ -479,40 +414,9 @@ cateid_cate = {'02876657':1, # bottle
                '04379243':28,#toy table
                }
 
-
-def cal_category(top_dir):
-   frame20_cate_image = np.zeros((240,320))
-   frame80_cate_image = np.zeros((240,320))
-
-   model_ids = [line.split('frame80_')[1].split('_')[0] for line in os.listdir(top_dir) if line.endswith('.txt') and line.startswith('frame80')]
-   model_ids.sort()
-   frame80_id = load_labeling(os.path.join(top_dir,'frame80_labeling_model_id.npz')) 
-   frame20_id = load_labeling(os.path.join(top_dir,'frame20_labeling_model_id.npz')) 
- 
-   frame20_id_list = np.unique(frame20_id) 
-   frame80_id_list = np.unique(frame80_id)
-
-   for instance_id in frame20_id_list:
-     if instance_id > 0:
-       frame20_pid = frame20_id == instance_id
-       frame20_pid = frame20_pid.reshape((240,320))
-       frame20_cate_image[frame20_pid] = cateid_cate[model_ids[int(instance_id)-1]]-1
-    
-   for instance_id in frame80_id_list:
-     if instance_id > 0:
-       frame80_pid = frame80_id == instance_id
-       frame80_pid = frame80_pid.reshape((240,320))
-       frame80_cate_image[frame80_pid] = cateid_cate[model_ids[int(instance_id)-1]]-1
-    
-   frame20_file = os.path.join(top_dir,'frame20_cate.npz') 
-   frame80_file = os.path.join(top_dir,'frame80_cate.npz')
-   np.savez(frame20_file,cate=frame20_cate_image)
-   np.savez(frame80_file,cate=frame80_cate_image)
-
 def load_boundary(boundary_file):
   tmp = np.load(boundary_file)['boundary']
   return tmp
-
 
 def cal_ending_traj(top_dir):
   frame2_center = load_seg(os.path.join(top_dir,'frame80_labeling.npz'))
@@ -619,6 +523,7 @@ def load_rigidflowmask(top_dir):
   return tmp
 
 if __name__ == '__main__':
+  "Annotate the ground truth dataset. "
   top_dir = '/home/linshaonju/interactive-segmentation/Data/BlensorResult_seq'
   
   num = 10000
@@ -634,8 +539,6 @@ if __name__ == '__main__':
         flow_file = os.path.join(top_d,'rotation.npz')
         print(flow_file)
         flow = load_rot(flow_file) 
- 
-    print(len(filelist))
 
   if 0:
     filelist = []
@@ -643,28 +546,12 @@ if __name__ == '__main__':
       top_d = os.path.join(top_dir,str(i))
       if os.path.exists(top_d):
         filelist.append(top_d)
-        #flow_file = os.path.join(top_d,'flow.npz')
-        #flow = np.load(flow_file)['flow']
-        #if np.any(np.isnan(flow)):
-        #  print(top_d)
-        #cal_transformation(top_d)
-        #if os.path.exists(os.path.join(top_d,'translation.npz')):
-        #  os.remove(os.path.join(top_d,'translation.npz'))
-        #if os.path.exists(os.path.join(top_d,'rotation.npz')):
-        #  os.remove(os.path.join(top_d,'rotation.npz'))
-        #if os.path.exists(os.path.join(top_d,'pred_frame1_xyz.npz')):
-        #  os.remove(os.path.join(top_d,'pred_frame1_xyz.npz'))
-        #if os.path.exists(os.path.join(top_d,'cc.npz')):
-        #  os.remove(os.path.join(top_d,'cc.npz'))
- 
 
     pool = Pool(100)
     for i, data in enumerate(pool.imap(cal_transformation,filelist)):
       print(i)
     pool.close()
 
-
-   
   if 0:
     filelist = []
     for i in xrange(0,num):
@@ -724,7 +611,7 @@ if __name__ == '__main__':
       if os.path.exists(top_d):
         filelist.append(top_d)
     pool = Pool(150)
-    for i, data in enumerate(pool.imap(cal_boundary_3,filelist)):
+    for i, data in enumerate(pool.imap(cal_boundary,filelist)):
       print(i)
       print(filelist[i])
 
