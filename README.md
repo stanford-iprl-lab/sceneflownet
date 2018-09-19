@@ -1,5 +1,8 @@
 # Motion-based Object Segmentation based on Dense RGB-D Scene Flow
-This repository contains the code for our paper on [Motion-based Object Segmentation based on Dense RGB-D Scene Flow] (https://arxiv.org/abs/1804.05195). 
+This repository contains the code for our paper on [Motion-based Object Segmentation based on Dense RGB-D Scene Flow](https://arxiv.org/abs/1804.05195). 
+
+## Abstract
+Given two consecutive RGB-D images, we propose a model that estimates a dense 3D motion field, also known as scene flow. We take advantage of the fact that in robot manipulation scenarios, scenes often consist of a set of rigidly moving objects. Our model jointly estimates (i) the segmentation of the scene into an unknown but finite number of objects, (ii) the motion trajectories of these objects and (iii) the object scene flow. We employ an hourglass, deep neural network architecture. In the encoding stage, the RGB and depth images undergo spatial compression and correlation. In the decoding stage, the model outputs three images containing a per-pixel estimate of the corresponding object center as well as object translation and rotation. This forms the basis for inferring the object segmentation and final object scene flow. To evaluate our model, we generated a new and challenging, large-scale, synthetic dataset that is specifically targeted at robotic manipulation: It contains a large number of scenes with a very diverse set of simultaneously moving 3D objects and is recorded with a simulated, static RGB-D camera. In quantitative experiments, we show that we outperform state-of-the-art scene flow and motion-segmentation methods on this data set. In qualitative experiments, we show how our learned model transfers to challenging real-world scenes, visually generating better results than existing methods. 
 
 ## How to Cite?
 ```
