@@ -55,5 +55,3 @@ def model_para_list(top_dir,frame_id):
     tran_list.append(tran)
   return model_path_list, tran_list, rot_list
 
-if __name__ == '__main__':
-  azi_ele_the_rho('/home/linshaonju/interactive-segmentation/Data/BlensorResult_2frame/0')
