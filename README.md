@@ -27,5 +27,9 @@ tensorflow-gpu==1.2.0
 ```
 cd segNet2; make
 ```
+## Dataset
+[Training Set](http://download.cs.stanford.edu/juno/sceneflownet/BlensorResult_train.tar.gz)
+[Validation Set](http://download.cs.stanford.edu/juno/sceneflownet/BlensorResult_val.tar.gz)
+
 ## License
 This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details
